@@ -36,6 +36,8 @@ import {
   scheduleSalahNotifications,
   getNextSalah,
   scheduleAfterIshaDailyNotifications,
+  scheduleFixedTimeDailyNotification,
+  isDayFullyLogged,
 } from "./utils/helpers";
 import {
   PreferenceObjType,
@@ -455,21 +457,6 @@ const App = () => {
       }
     })();
 
-    const scheduleDailyNotifications = async () => {
-      await scheduleAfterIshaDailyNotifications(
-        Number(userPreferences.dailyNotificationAfterIshaDelay),
-        userLocations,
-        userPreferences,
-      );
-    };
-
-    if (
-      userPreferences.dailyNotification === "1" &&
-      userPreferences.dailyNotificationOption === "afterIsha"
-    ) {
-      scheduleDailyNotifications();
-    }
-
     getNextSalahDetails();
   }, [
     userPreferences.prayerCalculationMethod,
@@ -486,6 +473,61 @@ const App = () => {
     userPreferences.polarCircleResolution,
     userPreferences.timeFormat,
     // userPreferences.country,
+    userLocations,
+  ]);
+
+  const isTodayFullyLogged = isDayFullyLogged(
+    fetchedSalahData.find(
+      (obj) => obj.date === format(new Date(), "yyyy-MM-dd"),
+    ),
+  );
+
+  // Reschedule on each launch too, as the reminders only cover the next few days.
+  useEffect(() => {
+    if (!isDatabaseInitialised || userPreferences.dailyNotification !== "1") {
+      return;
+    }
+
+    (async () => {
+      try {
+        if (userPreferences.dailyNotificationOption === "fixedTime") {
+          const [hour, minute] = userPreferences.dailyNotificationTime
+            .split(":")
+            .map(Number);
+          await scheduleFixedTimeDailyNotification(
+            hour,
+            minute,
+            isTodayFullyLogged,
+          );
+        } else if (
+          userPreferences.dailyNotificationOption === "afterIsha" &&
+          userLocations.length > 0 &&
+          userPreferences.prayerCalculationMethod !== ""
+        ) {
+          await scheduleAfterIshaDailyNotifications(
+            Number(userPreferences.dailyNotificationAfterIshaDelay),
+            userLocations,
+            userPreferences,
+            isTodayFullyLogged,
+          );
+        }
+      } catch (error) {
+        console.error("Unable to schedule daily reminder: ", error);
+      }
+    })();
+  }, [
+    isDatabaseInitialised,
+    isTodayFullyLogged,
+    userPreferences.dailyNotification,
+    userPreferences.dailyNotificationOption,
+    userPreferences.dailyNotificationTime,
+    userPreferences.dailyNotificationAfterIshaDelay,
+    userPreferences.prayerCalculationMethod,
+    userPreferences.highLatitudeRule,
+    userPreferences.ishaAngle,
+    userPreferences.ishaAdjustment,
+    userPreferences.shafaqRule,
+    userPreferences.polarCircleResolution,
     userLocations,
   ]);
 
@@ -1015,6 +1057,7 @@ const App = () => {
                   }
                   showSalahTimesSettingsSheet={showSalahTimesSettingsSheet}
                   userLocations={userLocations}
+                  isTodayFullyLogged={isTodayFullyLogged}
                   setShowChangelogSheet={setShowChangelogSheet}
                 />
               )}

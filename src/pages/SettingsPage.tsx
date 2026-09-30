@@ -57,6 +57,7 @@ interface SettingsPageProps {
   showSalahTimesSettingsSheet: boolean;
   userPreferences: userPreferencesType;
   userLocations: LocationsDataObjTypeArr;
+  isTodayFullyLogged: boolean;
   setShowChangelogSheet: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
@@ -73,6 +74,7 @@ const SettingsPage = ({
   showSalahTimesSettingsSheet,
   userPreferences,
   userLocations,
+  isTodayFullyLogged,
   setShowChangelogSheet,
 }: SettingsPageProps) => {
   const shareThisAppLink = async (link: string) => {
@@ -293,6 +295,7 @@ const SettingsPage = ({
                 setUserPreferences={setUserPreferences}
                 userPreferences={userPreferences}
                 userLocations={userLocations}
+                isTodayFullyLogged={isTodayFullyLogged}
               />
             </div>{" "}
             <div className="my-5 rounded-md">

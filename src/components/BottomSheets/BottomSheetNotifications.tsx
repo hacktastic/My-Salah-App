@@ -50,6 +50,7 @@ const BottomSheetNotifications = ({
   setUserPreferences,
   userPreferences,
   userLocations,
+  isTodayFullyLogged,
 }: {
   dbConnection: React.MutableRefObject<SQLiteDBConnection | undefined>;
   triggerId: string;
@@ -57,6 +58,7 @@ const BottomSheetNotifications = ({
   setUserPreferences: React.Dispatch<React.SetStateAction<userPreferencesType>>;
   userPreferences: userPreferencesType;
   userLocations: LocationsDataObjTypeArr;
+  isTodayFullyLogged: boolean;
 }) => {
   const [dailyNotificationToggle, setDailyNotificationToggle] =
     useState<boolean>(userPreferences.dailyNotification === "1" ? true : false);
@@ -117,12 +119,17 @@ const BottomSheetNotifications = ({
       const [hour, minute] = userPreferences.dailyNotificationTime
         .split(":")
         .map(Number);
-      await scheduleFixedTimeDailyNotification(hour, minute);
+      await scheduleFixedTimeDailyNotification(
+        hour,
+        minute,
+        isTodayFullyLogged,
+      );
     } else if (setting === "afterIsha") {
       await scheduleAfterIshaDailyNotifications(
         Number(userPreferences.dailyNotificationAfterIshaDelay),
         userLocations,
         userPreferences,
+        isTodayFullyLogged,
       );
     }
   };
@@ -162,7 +169,11 @@ const BottomSheetNotifications = ({
       const [hour, minute] = userPreferences.dailyNotificationTime
         .split(":")
         .map(Number);
-      await scheduleFixedTimeDailyNotification(hour, minute);
+      await scheduleFixedTimeDailyNotification(
+        hour,
+        minute,
+        isTodayFullyLogged,
+      );
 
       // await updateUserPrefs(
       //   dbConnection,
@@ -197,7 +208,7 @@ const BottomSheetNotifications = ({
     }));
     const [hour, minute] = userSelectedTime.split(":").map(Number);
 
-    await scheduleFixedTimeDailyNotification(hour, minute);
+    await scheduleFixedTimeDailyNotification(hour, minute, isTodayFullyLogged);
     await updateUserPrefs(
       dbConnection,
       "dailyNotificationTime",
@@ -370,6 +381,7 @@ const BottomSheetNotifications = ({
                           delay,
                           userLocations,
                           userPreferences,
+                          isTodayFullyLogged,
                         );
                       }
                       await updateUserPrefs(
