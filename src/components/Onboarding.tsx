@@ -487,6 +487,7 @@ const Onboarding = ({
                           ),
                           userLocations,
                           userPreferences,
+                          false,
                         );
 
                         await updateUserPrefs(
@@ -596,7 +597,7 @@ const Onboarding = ({
 
                       if (permission.display === "granted") {
                         dismissOnboardingSlides();
-                        await scheduleFixedTimeDailyNotification(21, 0);
+                        await scheduleFixedTimeDailyNotification(21, 0, false);
                         await updateUserPrefs(
                           dbConnection,
                           "dailyNotification",

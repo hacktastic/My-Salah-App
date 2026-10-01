@@ -6,6 +6,7 @@ import {
   SalahByDateObjType,
   SalahNamesTypeAdhanLibrary,
   SalahNotificationSettings,
+  SalahRecordType,
   salahTimesObjType,
   userPreferencesType,
 } from "../types/types";
@@ -18,7 +19,7 @@ import {
   PrayerTimes,
 } from "adhan";
 import { LocalNotifications } from "@capacitor/local-notifications";
-import { addDays, addMinutes, format, isValid, parse } from "date-fns";
+import { addDays, addMinutes, format, isValid, parse, set } from "date-fns";
 import { Toast } from "@capacitor/toast";
 import { Dialog } from "@capacitor/dialog";
 import { Capacitor } from "@capacitor/core";
@@ -196,6 +197,9 @@ export const cancelNotifications = async (
   // );
 };
 
+const DAILY_REMINDER_DAYS = 8;
+const DAILY_REMINDER_BASE_ID = 1000;
+
 const salahIdMap = {
   fajr: 1,
   sunrise: 2,
@@ -235,32 +239,48 @@ export const checkNotificationPermissions = async () => {
   return userNotificationPermission.display;
 };
 
+export const isDayFullyLogged = (record: SalahRecordType | undefined) =>
+  !!record && Object.values(record.salahs).every((status) => status !== "");
+
+// Each reminder is a one-off (not a repeating notification) so that today's
+// reminder can be left out once every salah is logged.
 export const scheduleFixedTimeDailyNotification = async (
   hour: number,
   minute: number,
+  skipToday: boolean,
 ) => {
-  await LocalNotifications.schedule({
-    notifications: [
-      {
-        id: 1,
-        title: "Daily Reminder",
-        body: `Did you log your prayers today?`,
-        schedule: {
-          on: {
-            hour: hour,
-            minute: minute,
-          },
-          allowWhileIdle: true,
-          repeats: true,
-        },
-        sound: "default",
-        channelId: "daily-reminder",
-      },
-    ],
-  });
+  await cancelNotifications("Daily Reminder");
 
-  // const pending = (await LocalNotifications.getPending()).notifications;
-  // console.log("FIXED DAILY NOTIFICATIONS AFTER BEING TURNED ON: ", pending);
+  const now = new Date();
+  const notifications = [];
+
+  for (let i = skipToday ? 1 : 0; i < DAILY_REMINDER_DAYS; i++) {
+    const reminderTime = set(addDays(now, i), {
+      hours: hour,
+      minutes: minute,
+      seconds: 0,
+      milliseconds: 0,
+    });
+
+    if (reminderTime <= now) continue;
+
+    notifications.push({
+      id: DAILY_REMINDER_BASE_ID + i,
+      title: "Daily Reminder",
+      body: `Did you log your prayers today?`,
+      schedule: {
+        at: reminderTime,
+        allowWhileIdle: true,
+        repeats: false,
+      },
+      sound: "default",
+      channelId: "daily-reminder",
+    });
+  }
+
+  if (notifications.length === 0) return;
+
+  await LocalNotifications.schedule({ notifications });
 };
 
 export const createLocalisedDate = (date: string) => {
@@ -499,12 +519,13 @@ export const scheduleAfterIshaDailyNotifications = async (
   delay: number,
   userLocations: LocationsDataObjTypeArr,
   userPreferences: userPreferencesType,
+  skipToday: boolean,
 ) => {
   await cancelNotifications("Daily Reminder");
 
   const now = new Date();
 
-  const nextSevenDays = Array.from({ length: 8 }, (_, i) => {
+  const nextSevenDays = Array.from({ length: DAILY_REMINDER_DAYS }, (_, i) => {
     return addDays(now, i);
   });
 
@@ -518,7 +539,8 @@ export const scheduleAfterIshaDailyNotifications = async (
 
   const arr = [];
 
-  for (let i = 0; i < nextSevenDays.length; i++) {
+  // Skip by Isha day, not by fire date: today's reminder can fire after midnight.
+  for (let i = skipToday ? 1 : 0; i < nextSevenDays.length; i++) {
     const salahTime = new PrayerTimes(coordinates, nextSevenDays[i], params)[
       "isha"
     ];
@@ -533,7 +555,7 @@ export const scheduleAfterIshaDailyNotifications = async (
     await LocalNotifications.schedule({
       notifications: [
         {
-          id: 1000 + i,
+          id: DAILY_REMINDER_BASE_ID + i,
           title: "Daily Reminder",
           body: `Did you log your prayers today?`,
           schedule: {
