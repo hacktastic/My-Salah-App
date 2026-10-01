@@ -78,6 +78,8 @@ import MajorUpdateOverlay from "./components/MajorUpdateOverlay";
 import SalahTimesPage from "./pages/SalahTimesPage";
 import { toggleDBConnection as toggleDBConnection } from "./utils/dbUtils";
 import { computeStreaks } from "./utils/streaks";
+import { buildWidgetSnapshot } from "./utils/widgetSnapshot";
+import { syncWidget } from "./utils/widgetSync";
 import { refreshCurrentLocation } from "./utils/currentLocation";
 import { syncBackgroundState } from "./utils/backgroundSync";
 import { LocalNotifications } from "@capacitor/local-notifications";
@@ -561,6 +563,13 @@ const App = () => {
     userPreferences,
     isTodayFullyLogged,
   ]);
+
+  // Every write path sets a new fetchedSalahData array, so this effect covers
+  // single logs, batch updates, imports, start-date changes, and a new day.
+  useEffect(() => {
+    if (!isDatabaseInitialised) return;
+    syncWidget(buildWidgetSnapshot(fetchedSalahData, new Date()));
+  }, [isDatabaseInitialised, fetchedSalahData]);
 
   useEffect(() => {
     let copyOfMissedSalahList: SalahByDateObjType = {};
