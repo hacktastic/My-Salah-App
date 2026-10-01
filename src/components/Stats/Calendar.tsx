@@ -1,6 +1,5 @@
-import { useState, useRef, useId, CSSProperties } from "react";
+import { useState, useRef, useId } from "react";
 import {
-  getSalahHaloDelay,
   salahStatusColorsHexCodes,
   showsSalahHalo,
 } from "../../utils/constants";
@@ -37,15 +36,13 @@ const calendarArcPaths: Record<CalendarArcSalah, string> = {
   Isha: "M 27.171832999677548 121.91978731185029 A 67 67 0 0 1 8.72744106433099 65.15378589922618",
 };
 
-// Two blurred gold dashes orbit the ring. With maskPaths, they show only over those arcs.
+// With glowPaths, those arcs get a still gold glow. Without them, two gold dashes orbit the whole ring.
 const CalendarDayHalo = ({
   id,
-  delayKey,
-  maskPaths,
+  glowPaths,
 }: {
   id: string;
-  delayKey: string;
-  maskPaths?: string[];
+  glowPaths?: string[];
 }) => (
   <>
     <defs>
@@ -63,37 +60,23 @@ const CalendarDayHalo = ({
           <feMergeNode in="blur" />
         </feMerge>
       </filter>
-      {maskPaths && (
-        <mask
-          id={`${id}-mask`}
-          maskUnits="userSpaceOnUse"
-          x="-30"
-          y="-30"
-          width="210"
-          height="210"
-        >
-          {maskPaths.map((d) => (
-            <path
-              key={d}
-              d={d}
-              fill="none"
-              stroke="#fff"
-              strokeWidth="44"
-              strokeLinecap="round"
-            />
-          ))}
-        </mask>
-      )}
     </defs>
-    <g mask={maskPaths ? `url(#${id}-mask)` : undefined}>
+    {glowPaths ? (
+      glowPaths.map((d) => (
+        <path
+          key={d}
+          d={d}
+          style={{ stroke: "var(--salah-halo-color)" }}
+          fill="none"
+          strokeWidth="11"
+          strokeLinecap="round"
+          filter={`url(#${id}-blur)`}
+        />
+      ))
+    ) : (
       <circle
         className="salah-halo-orbit"
-        style={
-          {
-            stroke: "var(--salah-halo-color)",
-            "--halo-delay": getSalahHaloDelay(delayKey),
-          } as CSSProperties
-        }
+        style={{ stroke: "var(--salah-halo-color)" }}
         cx="75"
         cy="75"
         r="67"
@@ -104,7 +87,7 @@ const CalendarDayHalo = ({
         strokeDasharray="20 30"
         filter={`url(#${id}-blur)`}
       />
-    </g>
+    )}
   </>
 );
 
@@ -309,10 +292,12 @@ const Calendar = ({
                       {haloArcs.length > 0 && (
                         <CalendarDayHalo
                           id={haloId}
-                          delayKey={dateKey}
-                          maskPaths={haloArcs.map(
-                            (salah) => calendarArcPaths[salah]
-                          )}
+                          glowPaths={
+                            haloArcs.length ===
+                            Object.keys(calendarArcPaths).length
+                              ? undefined
+                              : haloArcs.map((salah) => calendarArcPaths[salah])
+                          }
                         />
                       )}
                       {(
@@ -342,7 +327,7 @@ const Calendar = ({
                       }}
                     >
                       {individualHalo && (
-                        <CalendarDayHalo id={haloId} delayKey={dateKey} />
+                        <CalendarDayHalo id={haloId} />
                       )}
                       <circle
                         cx="75"

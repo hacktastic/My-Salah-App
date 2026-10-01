@@ -80,6 +80,7 @@ import { LocalNotifications } from "@capacitor/local-notifications";
 import {
   adhanLibrarySalahs,
   dictPreferencesDefaultValues,
+  syncSalahHaloAnimations,
 } from "./utils/constants";
 import BottomSheetChangelog from "./components/BottomSheets/BottomSheetChangeLog";
 
@@ -168,6 +169,12 @@ const App = () => {
     });
 
   const [isAppActive, setIsAppActive] = useState(true);
+
+  useEffect(() => {
+    document.addEventListener("animationstart", syncSalahHaloAnimations);
+    return () =>
+      document.removeEventListener("animationstart", syncSalahHaloAnimations);
+  }, []);
 
   useEffect(() => {
     // if (!isDatabaseInitialised) return;

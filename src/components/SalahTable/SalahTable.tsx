@@ -361,10 +361,7 @@ const SalahTable = ({
                     ]?.includes(salahName)
                       ? true
                       : false;
-                    const halo = getSalahHaloProps(
-                      rowData.salahs[salahName],
-                      `${rowData.date}-${salahName}`
-                    );
+                    const halo = getSalahHaloProps(rowData.salahs[salahName]);
                     return (
                       <section
                         onClick={() => {

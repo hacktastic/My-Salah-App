@@ -127,10 +127,7 @@ const BottomSheetSingleDateView = ({
           </h1>
 
           {clickedDateData.map((item) => {
-            const halo = getSalahHaloProps(
-              item.salahStatus,
-              item.date + item.salahName
-            );
+            const halo = getSalahHaloProps(item.salahStatus);
             return (
               <div
                 key={item.date + item.salahName}

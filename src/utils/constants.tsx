@@ -105,25 +105,11 @@ export const salahStatusColorsHexCodes = {
 };
 
 // Jamaah and On Time share a green, so the gold halo (--salah-halo-color) is what tells them apart.
-// Keep in sync with the salah-halo animation duration in index.css.
-export const SALAH_HALO_PERIOD_SECONDS = 4;
-
 export const showsSalahHalo = (status: SalahStatusType) =>
   status === "group" || status === "female-alone";
 
-// A stable per-key offset keeps neighbouring halos out of step without changing between renders.
-export const getSalahHaloDelay = (key: string) => {
-  let hash = 0;
-  for (let i = 0; i < key.length; i++) {
-    hash = (hash * 31 + key.charCodeAt(i)) | 0;
-  }
-  const periodMs = SALAH_HALO_PERIOD_SECONDS * 1000;
-  return `${-(Math.abs(hash) % periodMs) / 1000}s`;
-};
-
 export const getSalahHaloProps = (
-  status: SalahStatusType,
-  key: string
+  status: SalahStatusType
 ): { className: string; style: CSSProperties } => {
   if (!showsSalahHalo(status)) return { className: "", style: {} };
   return {
@@ -132,9 +118,23 @@ export const getSalahHaloProps = (
     style: {
       backgroundColor: "transparent",
       "--halo-fill": salahStatusColorsHexCodes[status],
-      "--halo-delay": getSalahHaloDelay(key),
     } as CSSProperties,
   };
+};
+
+// Each CSS animation starts when its element mounts, and the table mounts rows as it scrolls.
+// Pinning every halo to the timeline origin keeps them all at the same angle.
+export const syncSalahHaloAnimations = (event: AnimationEvent) => {
+  if (!event.animationName.startsWith("salah-halo")) return;
+  for (const animation of document.getAnimations()) {
+    if (
+      "animationName" in animation &&
+      String(animation.animationName).startsWith("salah-halo") &&
+      animation.startTime !== 0
+    ) {
+      animation.startTime = 0;
+    }
+  }
 };
 
 // export const prayerStatusColorsHexCodes = {

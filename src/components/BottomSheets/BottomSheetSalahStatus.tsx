@@ -306,8 +306,8 @@ const BottomSheetSalahStatus = ({
   //   "h-full px-5 py-3 rounded-xl mx-auto text-center flex flex-col items-center justify-around w-full";
   const statusBoxStyles =
     "aspect-square rounded-xl flex flex-col items-center justify-center";
-  const jamaahHalo = getSalahHaloProps("group", "status-sheet");
-  const prayedHalo = getSalahHaloProps("female-alone", "status-sheet");
+  const jamaahHalo = getSalahHaloProps("group");
+  const prayedHalo = getSalahHaloProps("female-alone");
 
   useEffect(() => {
     if (
