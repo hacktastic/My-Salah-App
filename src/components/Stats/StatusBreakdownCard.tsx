@@ -22,18 +22,21 @@ const StatusBreakdownCard = ({
         aria-label={statusData
           .map((item) => `${item.title}: ${item.percentage.toFixed(1)}%`)
           .join(", ")}
-        className="flex h-3 mt-4 overflow-hidden rounded-full bg-[var(--app-border-color)]"
+        // The gap separates Jamaah from Alone, which share a colour. flex-grow keeps the gaps inside the bar.
+        className="flex h-3 mt-4 overflow-hidden rounded-full gap-[2px]"
       >
-        {statusData.map((item) => (
-          <span
-            key={item.title}
-            aria-hidden="true"
-            style={{
-              width: `${item.percentage}%`,
-              backgroundColor: item.color,
-            }}
-          />
-        ))}
+        {statusData
+          .filter((item) => item.value > 0)
+          .map((item) => (
+            <span
+              key={item.title}
+              aria-hidden="true"
+              style={{
+                flex: `${item.percentage} 1 0`,
+                backgroundColor: item.color,
+              }}
+            />
+          ))}
       </div>
 
       <div className="grid grid-cols-4 gap-1 mt-4">

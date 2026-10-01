@@ -1,5 +1,9 @@
-import { useState, useRef } from "react";
-import { salahStatusColorsHexCodes } from "../../utils/constants";
+import { useState, useRef, useId, CSSProperties } from "react";
+import {
+  getSalahHaloDelay,
+  salahStatusColorsHexCodes,
+  showsSalahHalo,
+} from "../../utils/constants";
 
 import {
   format,
@@ -20,6 +24,89 @@ import {
 
 import BottomSheetSingleDateView from "../BottomSheets/BottomSheetSingleDateView";
 import { SQLiteDBConnection } from "@capacitor-community/sqlite";
+
+type CalendarArcSalah = "Fajr" | "Dhuhr" | "Asar" | "Maghrib" | "Isha";
+
+const calendarArcPaths: Record<CalendarArcSalah, string> = {
+  Fajr: "M 15.596914120979442 44.01172176371027 A 67 67 0 0 1 63.884959109541164 8.928403485284022",
+  Dhuhr:
+    "M 86.1150408904588 8.928403485284022 A 67 67 0 0 1 134.40308587902058 44.011721763710284",
+  Asar: "M 141.272558935669 65.15378589922615 A 67 67 0 0 1 122.82816700032245 121.91978731185029",
+  Maghrib:
+    "M 104.84365305321519 134.98630153992926 A 67 67 0 0 1 45.15634694678482 134.98630153992926",
+  Isha: "M 27.171832999677548 121.91978731185029 A 67 67 0 0 1 8.72744106433099 65.15378589922618",
+};
+
+// Two blurred gold dashes orbit the ring. With maskPaths, they show only over those arcs.
+const CalendarDayHalo = ({
+  id,
+  delayKey,
+  maskPaths,
+}: {
+  id: string;
+  delayKey: string;
+  maskPaths?: string[];
+}) => (
+  <>
+    <defs>
+      <filter
+        id={`${id}-blur`}
+        filterUnits="userSpaceOnUse"
+        x="-30"
+        y="-30"
+        width="210"
+        height="210"
+      >
+        <feGaussianBlur stdDeviation="5" result="blur" />
+        <feMerge>
+          <feMergeNode in="blur" />
+          <feMergeNode in="blur" />
+        </feMerge>
+      </filter>
+      {maskPaths && (
+        <mask
+          id={`${id}-mask`}
+          maskUnits="userSpaceOnUse"
+          x="-30"
+          y="-30"
+          width="210"
+          height="210"
+        >
+          {maskPaths.map((d) => (
+            <path
+              key={d}
+              d={d}
+              fill="none"
+              stroke="#fff"
+              strokeWidth="44"
+              strokeLinecap="round"
+            />
+          ))}
+        </mask>
+      )}
+    </defs>
+    <g mask={maskPaths ? `url(#${id}-mask)` : undefined}>
+      <circle
+        className="salah-halo-orbit"
+        style={
+          {
+            stroke: "var(--salah-halo-color)",
+            "--halo-delay": getSalahHaloDelay(delayKey),
+          } as CSSProperties
+        }
+        cx="75"
+        cy="75"
+        r="67"
+        fill="none"
+        strokeWidth="14"
+        strokeLinecap="round"
+        pathLength="100"
+        strokeDasharray="20 30"
+        filter={`url(#${id}-blur)`}
+      />
+    </g>
+  </>
+);
 
 interface CalenderProps {
   dbConnection: React.MutableRefObject<SQLiteDBConnection | undefined>;
@@ -45,6 +132,7 @@ const Calendar = ({
   formattedMonths,
 }: CalenderProps) => {
   const calenderSingleMonthHeightRef = useRef<HTMLDivElement>(null);
+  const haloIdPrefix = useId().replace(/:/g, "");
   const [showDailySalahDataModal, setShowDailySalahDataModal] = useState(false);
 
   const isDayInSpecificMonth = (dayToCheck: Date, currentMonth: string) => {
@@ -75,6 +163,8 @@ const Calendar = ({
       maghribColor: "transparent",
       ishaColor: "transparent",
       individualRadialColor: "transparent",
+      haloArcs: [] as CalendarArcSalah[],
+      individualHalo: false,
     };
 
     if (date < userStartDateParsed || date > todaysDate) {
@@ -92,6 +182,15 @@ const Calendar = ({
           keyof SalahsType,
           SalahStatusType,
         ][]) {
+          if (showsSalahHalo(salahStatus)) {
+            if (statsToShow === "All") {
+              colors.haloArcs.push(salah as CalendarArcSalah);
+            } else if (
+              salah === (statsToShow === "Asr" ? "Asar" : statsToShow)
+            ) {
+              colors.individualHalo = true;
+            }
+          }
           if (statsToShow === "All") {
             if (salah === "Fajr") {
               colors.fajrColor = salahStatusColorsHexCodes[salahStatus];
@@ -169,7 +268,18 @@ const Calendar = ({
                 maghribColor,
                 ishaColor,
                 individualRadialColor,
+                haloArcs,
+                individualHalo,
               } = determineRadialColors(date);
+              const dateKey = format(date, "yyyy-MM-dd");
+              const haloId = `halo-${haloIdPrefix}-${dateKey}`;
+              const arcColors: Record<CalendarArcSalah, string> = {
+                Fajr: fajrColor,
+                Dhuhr: dhuhrColor,
+                Asar: asarColor,
+                Maghrib: maghribColor,
+                Isha: ishaColor,
+              };
 
               return (
                 <div
@@ -190,62 +300,50 @@ const Calendar = ({
                       xmlns="http://www.w3.org/2000/svg"
                       id="svg"
                       viewBox="0 0 150 150"
-                      style={{ height: "35px", width: "35px" }}
+                      style={{
+                        height: "35px",
+                        width: "35px",
+                        overflow: "visible",
+                      }}
                     >
-                      <defs />
-                      <path
-                        d="M 86.1150408904588 8.928403485284022 A 67 67 0 0 1 134.40308587902058 44.011721763710284"
-                        style={{
-                          strokeWidth: "11px",
-                          strokeLinecap: "round",
-                        }}
-                        fill="none"
-                        stroke={dhuhrColor}
-                      />
-                      <path
-                        d="M 141.272558935669 65.15378589922615 A 67 67 0 0 1 122.82816700032245 121.91978731185029"
-                        style={{
-                          strokeWidth: "11px",
-                          strokeLinecap: "round",
-                        }}
-                        fill="none"
-                        stroke={asarColor}
-                      />
-                      <path
-                        d="M 104.84365305321519 134.98630153992926 A 67 67 0 0 1 45.15634694678482 134.98630153992926"
-                        style={{
-                          strokeWidth: "11px",
-                          strokeLinecap: "round",
-                        }}
-                        fill="none"
-                        stroke={maghribColor}
-                      />
-                      <path
-                        d="M 27.171832999677548 121.91978731185029 A 67 67 0 0 1 8.72744106433099 65.15378589922618"
-                        style={{
-                          strokeWidth: "11px",
-                          strokeLinecap: "round",
-                        }}
-                        fill="none"
-                        stroke={ishaColor}
-                      />
-                      <path
-                        d="M 15.596914120979442 44.01172176371027 A 67 67 0 0 1 63.884959109541164 8.928403485284022"
-                        style={{
-                          strokeWidth: "11px",
-                          strokeLinecap: "round",
-                        }}
-                        fill="none"
-                        stroke={fajrColor}
-                      />
+                      {haloArcs.length > 0 && (
+                        <CalendarDayHalo
+                          id={haloId}
+                          delayKey={dateKey}
+                          maskPaths={haloArcs.map(
+                            (salah) => calendarArcPaths[salah]
+                          )}
+                        />
+                      )}
+                      {(
+                        Object.keys(calendarArcPaths) as CalendarArcSalah[]
+                      ).map((salah) => (
+                        <path
+                          key={salah}
+                          d={calendarArcPaths[salah]}
+                          style={{
+                            strokeWidth: "11px",
+                            strokeLinecap: "round",
+                          }}
+                          fill="none"
+                          stroke={arcColors[salah]}
+                        />
+                      ))}
                     </svg>
                   ) : (
                     <svg
                       className="absolute"
                       xmlns="http://www.w3.org/2000/svg"
                       viewBox="0 0 150 150"
-                      style={{ height: "35px", width: "35px" }}
+                      style={{
+                        height: "35px",
+                        width: "35px",
+                        overflow: "visible",
+                      }}
                     >
+                      {individualHalo && (
+                        <CalendarDayHalo id={haloId} delayKey={dateKey} />
+                      )}
                       <circle
                         cx="75"
                         cy="75"

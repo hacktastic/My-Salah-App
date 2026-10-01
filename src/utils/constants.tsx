@@ -1,7 +1,9 @@
 import { format } from "date-fns";
+import type { CSSProperties } from "react";
 import {
   SalahNamesType,
   SalahNamesTypeAdhanLibrary,
+  SalahStatusType,
   userPreferencesType,
 } from "../types/types";
 
@@ -94,12 +96,45 @@ export const reasonsStyles =
 
 export const salahStatusColorsHexCodes = {
   group: "#5FAE82",
-  "male-alone": "#D4B245",
+  "male-alone": "#5FAE82",
   "female-alone": "#5FAE82",
   excused: "#8C4FB5",
-  late: "#D9653B",
-  missed: "#E63946",
+  late: "#E5B233",
+  missed: "#E5484D",
   "": "#585858",
+};
+
+// Jamaah and On Time share a green, so the gold halo (--salah-halo-color) is what tells them apart.
+// Keep in sync with the salah-halo animation duration in index.css.
+export const SALAH_HALO_PERIOD_SECONDS = 4;
+
+export const showsSalahHalo = (status: SalahStatusType) =>
+  status === "group" || status === "female-alone";
+
+// A stable per-key offset keeps neighbouring halos out of step without changing between renders.
+export const getSalahHaloDelay = (key: string) => {
+  let hash = 0;
+  for (let i = 0; i < key.length; i++) {
+    hash = (hash * 31 + key.charCodeAt(i)) | 0;
+  }
+  const periodMs = SALAH_HALO_PERIOD_SECONDS * 1000;
+  return `${-(Math.abs(hash) % periodMs) / 1000}s`;
+};
+
+export const getSalahHaloProps = (
+  status: SalahStatusType,
+  key: string
+): { className: string; style: CSSProperties } => {
+  if (!showsSalahHalo(status)) return { className: "", style: {} };
+  return {
+    className: "salah-halo",
+    // The fill moves to ::after so the ring in ::before can sit between it and the page.
+    style: {
+      backgroundColor: "transparent",
+      "--halo-fill": salahStatusColorsHexCodes[status],
+      "--halo-delay": getSalahHaloDelay(key),
+    } as CSSProperties,
+  };
 };
 
 // export const prayerStatusColorsHexCodes = {

@@ -593,3 +593,75 @@ td {
   box-shadow: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E %3Cpath d='M15.88 8.29L10 14.17l-1.88-1.88a.996.996 0 1 0-1.41 1.41l2.59 2.59c.39.39 1.02.39 1.41 0L17.3 9.7a.996.996 0 0 0 0-1.41c-.39-.39-1.03-.39-1.42 0z' fill='%23fff'/%3E %3C/svg%3E");
 }
+
+/* Jamaah halo. Duration must match SALAH_HALO_PERIOD_SECONDS in constants.tsx. */
+
+:root {
+  --salah-halo-color: #f2c94c;
+}
+
+@property --halo-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.salah-halo {
+  position: relative;
+  isolation: isolate;
+}
+
+.salah-halo::before,
+.salah-halo::after {
+  content: "";
+  position: absolute;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.salah-halo::before {
+  inset: -2px;
+  background: conic-gradient(
+    from var(--halo-angle),
+    transparent 0deg,
+    var(--salah-halo-color) 70deg,
+    transparent 150deg 180deg,
+    var(--salah-halo-color) 250deg,
+    transparent 330deg
+  );
+  filter: blur(2px);
+  animation: salah-halo-spin 4s linear infinite;
+  animation-delay: var(--halo-delay, 0s);
+}
+
+.salah-halo::after {
+  inset: 0;
+  background: var(--halo-fill);
+}
+
+.salah-halo-orbit {
+  transform-box: view-box;
+  transform-origin: 50% 50%;
+  animation: salah-halo-orbit 4s linear infinite;
+  animation-delay: var(--halo-delay, 0s);
+}
+
+@keyframes salah-halo-spin {
+  to {
+    --halo-angle: 360deg;
+  }
+}
+
+@keyframes salah-halo-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .salah-halo::before,
+  .salah-halo-orbit {
+    animation: none;
+  }
+}
