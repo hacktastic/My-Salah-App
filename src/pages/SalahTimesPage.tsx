@@ -48,6 +48,7 @@ import {
 } from "../utils/constants";
 import Onboarding from "../components/Onboarding";
 import CalculationMethodOptions from "../components/CalculationMethodOptions";
+import { locationDisplayName } from "../utils/currentLocation";
 
 interface SalahTimesPageProps {
   dbConnection: React.MutableRefObject<SQLiteDBConnection | undefined>;
@@ -131,7 +132,7 @@ const SalahTimesPage = ({
                     className="text-[var(--ion-text-color)] mr-1"
                     icon={navigate}
                   />
-                  <p>{location.locationName}</p>
+                  <p>{locationDisplayName(location)}</p>
                   <IonIcon
                     className="text-[var(--ion-text-color)] mr-1 ml-2"
                     icon={chevronDown}

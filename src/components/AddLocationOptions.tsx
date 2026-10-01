@@ -12,29 +12,26 @@ import { AndroidSettings } from "capacitor-native-settings";
 import { SQLiteDBConnection } from "@capacitor-community/sqlite";
 import { Capacitor } from "@capacitor/core";
 import { useState } from "react";
-import cities from "../assets/cities.json";
 
 import {
   closeCircle,
   locate,
-  locationOutline,
+  navigateOutline,
   searchOutline,
 } from "ionicons/icons";
 import { LocationsDataObjTypeArr, OnboardingMode } from "../types/types";
 import { promptToOpenDeviceSettings, showAlert } from "../utils/helpers";
 import { fetchAllLocations, toggleDBConnection } from "../utils/dbUtils";
+import { allCities } from "../utils/cities";
+import {
+  addCurrentLocation,
+  getCurrentLocationRow,
+} from "../utils/currentLocation";
+import {
+  requestAndroidBackgroundLocation,
+  requestIOSLocationPermission,
+} from "../utils/backgroundSync";
 
-const allCities = cities.map(
-  (obj: { country: string; name: string; lat: string; lng: string }) => {
-    return {
-      country: obj.country,
-      city: obj.name,
-      latitude: obj.lat,
-      longitude: obj.lng,
-      search: obj.name.toLowerCase(),
-    };
-  },
-);
 interface AddLocationOptionsProps {
   // setShowSalahTimesSettingsSheet?: React.Dispatch<
   //   React.SetStateAction<boolean>
@@ -66,7 +63,7 @@ const AddLocationOptions = ({
     longitude: null | number;
   };
 
-  type modeType = "gps" | "manualCitySearch" | "manualCoords" | null;
+  type modeType = "manualCitySearch" | "manualCoords" | null;
 
   const [presentLocationSpinner, dismissLocationSpinner] = useIonLoading();
   const [showAddLocationForm, setShowAddLocationForm] =
@@ -84,6 +81,7 @@ const AddLocationOptions = ({
   });
   const [isCityNameClicked, setIsCityNameClicked] = useState(false);
   const [mode, setMode] = useState<modeType>(null);
+  const hasCurrentLocation = !!getCurrentLocationRow(userLocations ?? []);
   const [
     isDefaultLocationCheckBoxChecked,
     setIsDefaultLocationCheckBoxChecked,
@@ -144,13 +142,29 @@ const AddLocationOptions = ({
         maximumAge: 0,
       });
 
-      setCoords({
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-      });
+      try {
+        await toggleDBConnection(dbConnection, "open");
+        await addCurrentLocation(dbConnection, {
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        });
+        const { allLocations } = await fetchAllLocations(dbConnection);
+        setUserLocations(allLocations);
+      } finally {
+        await toggleDBConnection(dbConnection, "close");
+      }
 
-      // await dismissLocationSpinner();
-      setShowAddLocationForm(true);
+      // The location works in the foreground even if the user refuses this.
+      await requestAndroidBackgroundLocation().catch(console.error);
+
+      if (!onboardingMode) {
+        setShowLocationAddedToast(true);
+      }
+      setShowAddLocationSheet?.(false);
+
+      if (onboardingMode !== null && switchToNextPage) {
+        switchToNextPage();
+      }
     } catch (error) {
       setShowLocationFailureToast(true);
       // console.log("Failed to obtain location");
@@ -199,12 +213,16 @@ const AddLocationOptions = ({
             Capacitor.getPlatform() === "ios" ||
             Capacitor.getPlatform() === "android"
           ) {
-            const permissionRequest = await Geolocation.requestPermissions();
+            const isGranted =
+              Capacitor.getPlatform() === "ios"
+                ? await requestIOSLocationPermission()
+                : await Geolocation.requestPermissions().then(
+                    (result) =>
+                      result.location === "granted" ||
+                      result.coarseLocation === "granted",
+                  );
 
-            if (
-              permissionRequest.location === "granted" ||
-              permissionRequest.coarseLocation === "granted"
-            ) {
+            if (isGranted) {
               await handleGrantedPermission();
             }
           } else if (Capacitor.getPlatform() === "web") {
@@ -259,7 +277,6 @@ const AddLocationOptions = ({
              flex flex-col items-center justify-center -translate-y-[15%] bg-[var(--card-bg-color)]"
           >
             <div className="pt-3 text-center">
-              {mode === "gps" && <p className="text-xs">Name this location</p>}
               <div className="flex items-center">
                 <IonInput
                   className="w-full min-w-0 px-2 py-2 rounded-lg"
@@ -267,11 +284,7 @@ const AddLocationOptions = ({
                   type="text"
                   // disabled={isCityNameClicked ? true : false}
                   readonly={isCityNameClicked ? true : false}
-                  placeholder={
-                    mode === "gps"
-                      ? "e.g. Home, Work, City Name"
-                      : "Enter Location Name"
-                  }
+                  placeholder="Enter Location Name"
                   onIonInput={(e) => {
                     setLocationName(e.detail.value || "");
                     setShowError((prev) => ({
@@ -563,11 +576,13 @@ const AddLocationOptions = ({
         </div>
         <section className="mx-4">
           <div
-            className=" text-center border-transparent p-2 mb-5 rounded-lg bg-[var(--sheet-option-bg)]"
+            className={`text-center border-transparent p-2 mb-5 rounded-lg bg-[var(--sheet-option-bg)] ${
+              hasCurrentLocation ? "opacity-50" : ""
+            }`}
+            aria-disabled={hasCurrentLocation}
             onClick={async () => {
-              if (showAddLocationForm) return;
+              if (showAddLocationForm || hasCurrentLocation) return;
 
-              setMode("gps");
               // presentLocationSpinner({
               //   message: "Detecting location...",
               //   backdropDismiss: false,
@@ -583,12 +598,14 @@ const AddLocationOptions = ({
             }}
           >
             <div className="mr-2">
-              <IonIcon className="text-lg" icon={locationOutline} />{" "}
+              <IonIcon className="text-lg" icon={navigateOutline} />{" "}
             </div>
             <div>
-              <p className="mt-0">Use Device GPS</p>
+              <p className="mt-0">Use My Current Location</p>
               <p className="text-xs opacity-80">
-                Determine Location Automatically
+                {hasCurrentLocation
+                  ? "Already added"
+                  : "Updates automatically as you travel"}
               </p>
             </div>
           </div>

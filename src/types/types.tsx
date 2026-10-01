@@ -96,6 +96,8 @@ export type LocationsDataObjType = {
   latitude: number;
   longitude: number;
   isSelected: number;
+  isCurrentLocation: number;
+  updatedAt: string;
 };
 
 export type LocationsDataObjTypeArr = LocationsDataObjType[];

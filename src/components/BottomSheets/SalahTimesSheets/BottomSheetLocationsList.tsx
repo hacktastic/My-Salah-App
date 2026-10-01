@@ -13,8 +13,9 @@ import {
 
 import { SQLiteDBConnection } from "@capacitor-community/sqlite";
 
-import { add, trashOutline } from "ionicons/icons";
-import { useState } from "react";
+import { add, navigate, trashOutline } from "ionicons/icons";
+import { formatDistanceToNow } from "date-fns";
+import { useEffect, useState } from "react";
 
 import { MdCheck } from "react-icons/md";
 import {
@@ -28,6 +29,15 @@ import {
 } from "../../../utils/constants";
 import { fetchAllLocations, toggleDBConnection } from "../../../utils/dbUtils";
 import ActionSheet from "../../ActionSheet";
+import {
+  getCurrentLocationRow,
+  locationDisplayName,
+  sortCurrentLocationFirst,
+} from "../../../utils/currentLocation";
+import {
+  hasBackgroundLocation,
+  requestAndroidBackgroundLocation,
+} from "../../../utils/backgroundSync";
 import Toast from "../../Toast";
 
 import {
@@ -72,6 +82,16 @@ const BottomSheetLocationsList = ({
     null,
   );
   const [showDeleteLocationToast, setShowDeleteLocationToast] = useState(false);
+  const [needsBackgroundLocation, setNeedsBackgroundLocation] = useState(false);
+  const hasCurrentLocation = !!getCurrentLocationRow(userLocations ?? []);
+
+  useEffect(() => {
+    if (!showLocationsListSheet || !hasCurrentLocation) return;
+
+    hasBackgroundLocation()
+      .then((granted) => setNeedsBackgroundLocation(!granted))
+      .catch(console.error);
+  }, [showLocationsListSheet, hasCurrentLocation]);
 
   const updateActiveLocation = async (id: number) => {
     if (!dbConnection || !dbConnection.current) {
@@ -141,8 +161,20 @@ const BottomSheetLocationsList = ({
         </IonToolbar>
       </IonHeader>
       <IonContent style={{ "--background": "var(--card-bg-color)" }}>
+        {needsBackgroundLocation && (
+          <p
+            className="mx-4 my-2 text-xs opacity-80"
+            onClick={async () => {
+              await requestAndroidBackgroundLocation();
+              setNeedsBackgroundLocation(!(await hasBackgroundLocation()));
+            }}
+          >
+            Current Location updates only while the app is open. Tap to allow
+            location "all the time" so Salah times update when you travel.
+          </p>
+        )}
         <ul>
-          {userLocations?.map((location) => (
+          {sortCurrentLocationFirst(userLocations ?? []).map((location) => (
             <li
               key={location.id}
               className="flex items-center justify-between mx-4 bg-[var(--card-bg-color)] border-b border-[var(--app-border-color)]"
@@ -178,7 +210,20 @@ const BottomSheetLocationsList = ({
                     ${location.isSelected === 1 ? "opacity-100" : "opacity-0"}
                  `}
                 />
-                <p>{location.locationName}</p>
+                {location.isCurrentLocation === 1 && (
+                  <IonIcon className="mr-2" icon={navigate} />
+                )}
+                <div>
+                  <p>{locationDisplayName(location)}</p>
+                  {location.isCurrentLocation === 1 && location.updatedAt && (
+                    <p className="text-xs opacity-60">
+                      Updated{" "}
+                      {formatDistanceToNow(new Date(location.updatedAt), {
+                        addSuffix: true,
+                      })}
+                    </p>
+                  )}
+                </div>
               </div>
 
               <IonButton

@@ -10,6 +10,9 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+
+# Built by scripts/build-background.mjs
+/public/runners/
 *.local
 *.env
 
