@@ -30,9 +30,7 @@ const prefs: userPreferencesType = {
   prayerCalculationMethod: "Qatar",
 };
 
-const dohaLocations = [
-  { id: 1, locationName: "Doha", ...DOHA, isSelected: 1 },
-];
+const dohaLocations = [{ id: 1, locationName: "Doha", ...DOHA, isSelected: 1 }];
 
 const scheduledNotifications = () =>
   scheduleMock.mock.calls.map((call) => call[0].notifications[0]);
@@ -87,7 +85,12 @@ describe("buildSalahNotificationPlan", () => {
   ] as const)(
     "matches what scheduleSalahNotifications schedules for %s (%s)",
     async (salahName, setting) => {
-      await scheduleSalahNotifications(dohaLocations, salahName, prefs, setting);
+      await scheduleSalahNotifications(
+        dohaLocations,
+        salahName,
+        prefs,
+        setting,
+      );
 
       const plan = buildSalahNotificationPlan(
         DOHA.latitude,
@@ -112,28 +115,52 @@ describe("buildSalahNotificationPlan", () => {
     },
   );
 
-  it("matches what scheduleAfterIshaDailyNotifications schedules", async () => {
-    await scheduleAfterIshaDailyNotifications(60, dohaLocations, prefs);
+  it.each([false, true])(
+    "matches what scheduleAfterIshaDailyNotifications schedules (skipToday: %s)",
+    async (skipToday) => {
+      await scheduleAfterIshaDailyNotifications(
+        60,
+        dohaLocations,
+        prefs,
+        skipToday,
+      );
 
-    const plan = buildAfterIshaReminderPlan(
-      DOHA.latitude,
-      DOHA.longitude,
-      prefs,
-      60,
-      NOW,
-    );
+      const plan = buildAfterIshaReminderPlan(
+        DOHA.latitude,
+        DOHA.longitude,
+        prefs,
+        60,
+        NOW,
+        skipToday,
+      );
 
-    expect(plan[0].id).toBe(1000);
-    expect(scheduledNotifications()).toEqual(
-      plan.map((n) => ({
-        id: n.id,
-        title: n.title,
-        body: n.body,
-        schedule: { at: n.at, allowWhileIdle: true, repeats: false },
-        sound: n.sound,
-        channelId: n.channelId,
-      })),
-    );
+      expect(plan[0].id).toBe(1000);
+      expect(scheduledNotifications()).toEqual(
+        plan.map((n) => ({
+          id: n.id,
+          title: n.title,
+          body: n.body,
+          schedule: { at: n.at, allowWhileIdle: true, repeats: false },
+          sound: n.sound,
+          channelId: n.channelId,
+        })),
+      );
+    },
+  );
+
+  it("leaves out today's after-Isha reminder when skipToday is set", () => {
+    const plan = (skipToday: boolean) =>
+      buildAfterIshaReminderPlan(
+        DOHA.latitude,
+        DOHA.longitude,
+        prefs,
+        60,
+        NOW,
+        skipToday,
+      );
+
+    expect(plan(true)).toHaveLength(plan(false).length - 1);
+    expect(plan(true)[0].at).toEqual(plan(false)[1].at);
   });
 });
 
@@ -145,6 +172,7 @@ describe("buildAllNotificationPlans", () => {
       { ...prefs, fajrNotification: "on", ishaNotification: "adhan" },
       NOW,
       "ios",
+      false,
     );
 
     const titles = new Set(plan.map((n) => n.title));
@@ -162,6 +190,7 @@ describe("buildAllNotificationPlans", () => {
       },
       NOW,
       "ios",
+      false,
     );
 
     expect(plan.some((n) => n.title === "Daily Reminder")).toBe(true);
@@ -174,6 +203,7 @@ describe("buildAllNotificationPlans", () => {
       { ...prefs, prayerCalculationMethod: "", fajrNotification: "on" },
       NOW,
       "ios",
+      false,
     );
 
     expect(plan).toEqual([]);

@@ -1,4 +1,5 @@
 // Shared by the iOS runner and the Android worker bundles. No Capacitor imports.
+import { format } from "date-fns";
 import type { userPreferencesType } from "../types/types";
 import { distanceKm, LatLng, MOVE_THRESHOLD_KM } from "../utils/geo";
 import {
@@ -12,6 +13,9 @@ export type BackgroundState = {
   latitude: number;
   longitude: number;
   preferences: userPreferencesType;
+  // "yyyy-MM-dd" of the last day with every salah logged. A date, not a flag:
+  // the job can run on a later day than the sync.
+  fullyLoggedDate: string | null;
 };
 
 export const planAfterMove = (
@@ -28,5 +32,6 @@ export const planAfterMove = (
     state.preferences,
     now,
     platform,
+    state.fullyLoggedDate === format(now, "yyyy-MM-dd"),
   );
 };

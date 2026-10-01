@@ -17,7 +17,10 @@ type RunnerCallback = (
   args: Record<string, unknown> | undefined,
 ) => void;
 
-declare function addEventListener(event: string, callback: RunnerCallback): void;
+declare function addEventListener(
+  event: string,
+  callback: RunnerCallback,
+): void;
 
 const STATE_KEY = "currentLocationState";
 
@@ -41,7 +44,12 @@ addEventListener("refreshLocation", (resolve, reject) => {
 
     const state: BackgroundState = JSON.parse(stored);
     const { latitude, longitude } = CapacitorGeolocation.getCurrentPosition();
-    const plan = planAfterMove(state, { latitude, longitude }, new Date(), "ios");
+    const plan = planAfterMove(
+      state,
+      { latitude, longitude },
+      new Date(),
+      "ios",
+    );
 
     if (plan === null) return resolve();
 

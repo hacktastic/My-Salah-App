@@ -39,7 +39,8 @@ const salahIdMap = {
   isha: 6,
 };
 
-const DAYS_TO_SCHEDULE = 8;
+export const DAILY_REMINDER_DAYS = 8;
+export const DAILY_REMINDER_BASE_ID = 1000;
 
 export const upperCaseFirstLetter = (text: string) => {
   return text.charAt(0).toUpperCase() + text.slice(1);
@@ -84,10 +85,11 @@ const upcomingTimes = (
   params: CalculationParameters,
   salahName: SalahNamesTypeAdhanLibrary,
   now: Date,
+  firstDay = 0,
 ) => {
   const times: Date[] = [];
 
-  for (let i = 0; i < DAYS_TO_SCHEDULE; i++) {
+  for (let i = firstDay; i < DAILY_REMINDER_DAYS; i++) {
     const salahTime = new PrayerTimes(coordinates, addDays(now, i), params)[
       salahName
     ];
@@ -158,20 +160,26 @@ export const buildAfterIshaReminderPlan = (
   userPreferences: userPreferencesType,
   delayMinutes: number,
   now: Date,
+  skipToday: boolean,
 ): PlannedNotification[] => {
   const result = buildCalculationParams(latitude, longitude, userPreferences);
   if (!result) return [];
 
-  return upcomingTimes(result.coordinates, result.params, "isha", now).map(
-    (ishaTime, i) => ({
-      id: 1000 + i,
-      title: "Daily Reminder",
-      body: "Did you log your prayers today?",
-      at: addMinutes(ishaTime, delayMinutes),
-      sound: "default",
-      channelId: "daily-reminder",
-    }),
-  );
+  // Skip by Isha day, not by fire date: today's reminder can fire after midnight.
+  return upcomingTimes(
+    result.coordinates,
+    result.params,
+    "isha",
+    now,
+    skipToday ? 1 : 0,
+  ).map((ishaTime, i) => ({
+    id: DAILY_REMINDER_BASE_ID + i,
+    title: "Daily Reminder",
+    body: "Did you log your prayers today?",
+    at: addMinutes(ishaTime, delayMinutes),
+    sound: "default",
+    channelId: "daily-reminder",
+  }));
 };
 
 export const buildAllNotificationPlans = (
@@ -180,6 +188,7 @@ export const buildAllNotificationPlans = (
   userPreferences: userPreferencesType,
   now: Date,
   platform: string,
+  skipTodayReminder: boolean,
 ): PlannedNotification[] => {
   const salahPlans = NOTIFIABLE_SALAHS.flatMap((salahName) =>
     buildSalahNotificationPlan(
@@ -204,6 +213,7 @@ export const buildAllNotificationPlans = (
         userPreferences,
         Number(userPreferences.dailyNotificationAfterIshaDelay),
         now,
+        skipTodayReminder,
       )
     : [];
 

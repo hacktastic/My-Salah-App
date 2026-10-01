@@ -27,6 +27,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -113,8 +114,17 @@ public class CurrentLocationWorker extends Worker {
         ) {
             isolate.evaluateJavaScriptAsync(readAsset(context, PLAN_BUNDLE_ASSET)).get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
+            int deviceUtcOffsetMinutes = TimeZone.getDefault().getOffset(System.currentTimeMillis()) / 60000;
             String call =
-                "buildPlanJson(" + JSONObject.quote(state) + "," + location.getLatitude() + "," + location.getLongitude() + ")";
+                "buildPlanJson(" +
+                JSONObject.quote(state) +
+                "," +
+                location.getLatitude() +
+                "," +
+                location.getLongitude() +
+                "," +
+                deviceUtcOffsetMinutes +
+                ")";
 
             return isolate.evaluateJavaScriptAsync(call).get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
         }

@@ -29,26 +29,48 @@ const state: BackgroundState = {
     fajrNotification: "adhan",
     ishaNotification: "on",
   },
+  fullyLoggedDate: null,
 };
 
+// The VM context uses the same time zone as the Vitest process.
+const DEVICE_OFFSET = -new Date().getTimezoneOffset();
+
 describe("android plan bundle", () => {
-  let buildPlanJson: (json: string, lat: number, lng: number) => string;
+  let buildPlanJson: (
+    json: string,
+    lat: number,
+    lng: number,
+    offset: number,
+  ) => string;
 
   beforeAll(async () => {
     const context = vm.createContext({});
-    vm.runInContext(await bundle("src/background/androidPlanEntry.ts"), context);
+    vm.runInContext(
+      await bundle("src/background/androidPlanEntry.ts"),
+      context,
+    );
     buildPlanJson = context.buildPlanJson;
   });
 
   it("returns null when the user did not move more than 5 km", () => {
     expect(
-      buildPlanJson(JSON.stringify(state), DOHA.latitude + 0.01, DOHA.longitude),
+      buildPlanJson(
+        JSON.stringify(state),
+        DOHA.latitude + 0.01,
+        DOHA.longitude,
+        DEVICE_OFFSET,
+      ),
     ).toBe("null");
   });
 
   it("returns LocalNotification JSON for the new position after a move", () => {
     const plan = JSON.parse(
-      buildPlanJson(JSON.stringify(state), LONDON.latitude, LONDON.longitude),
+      buildPlanJson(
+        JSON.stringify(state),
+        LONDON.latitude,
+        LONDON.longitude,
+        DEVICE_OFFSET,
+      ),
     );
 
     expect(plan.length).toBeGreaterThan(0);
@@ -60,7 +82,38 @@ describe("android plan bundle", () => {
     expect(fajr.sound).toBe("adhan_fajr.mp3");
     expect(fajr.channelId).toBe("fajr-reminder-with-adhan");
     expect(fajr.schedule.allowWhileIdle).toBe(true);
-    expect(fajr.schedule.at).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+    expect(fajr.schedule.at).toMatch(
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/,
+    );
+  });
+});
+
+describe("android plan bundle guards", () => {
+  let buildPlanJson: (
+    json: string,
+    lat: number,
+    lng: number,
+    offset: number,
+  ) => string;
+
+  beforeAll(async () => {
+    const context = vm.createContext({});
+    vm.runInContext(
+      await bundle("src/background/androidPlanEntry.ts"),
+      context,
+    );
+    buildPlanJson = context.buildPlanJson;
+  });
+
+  it("throws when the sandbox time zone differs from the device", () => {
+    expect(() =>
+      buildPlanJson(
+        JSON.stringify(state),
+        LONDON.latitude,
+        LONDON.longitude,
+        DEVICE_OFFSET + 60,
+      ),
+    ).toThrow(/does not match device offset/);
   });
 });
 

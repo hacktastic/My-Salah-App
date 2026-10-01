@@ -1,4 +1,5 @@
 import { Capacitor, registerPlugin } from "@capacitor/core";
+import { format } from "date-fns";
 import { BackgroundRunner } from "@capacitor/background-runner";
 import type { BackgroundState } from "../background/backgroundPlan";
 import { LocationsDataObjTypeArr, userPreferencesType } from "../types/types";
@@ -11,14 +12,17 @@ interface CurrentLocationSyncPlugin {
   requestBackgroundLocation(): Promise<{ granted: boolean }>;
 }
 
-const CurrentLocationSync =
-  registerPlugin<CurrentLocationSyncPlugin>("CurrentLocationSync");
+const CurrentLocationSync = registerPlugin<CurrentLocationSyncPlugin>(
+  "CurrentLocationSync",
+);
 
 const RUNNER_LABEL = "com.mysalahapp.app.locationrefresh";
 
 export const buildBackgroundState = (
   userLocations: LocationsDataObjTypeArr,
   userPreferences: userPreferencesType,
+  isTodayFullyLogged: boolean,
+  now = new Date(),
 ): BackgroundState | undefined => {
   const activeLocation = getActiveLocation(userLocations);
   if (activeLocation?.isCurrentLocation !== 1) return;
@@ -27,6 +31,7 @@ export const buildBackgroundState = (
     latitude: activeLocation.latitude,
     longitude: activeLocation.longitude,
     preferences: userPreferences,
+    fullyLoggedDate: isTodayFullyLogged ? format(now, "yyyy-MM-dd") : null,
   };
 };
 
@@ -35,8 +40,13 @@ export const buildBackgroundState = (
 export const syncBackgroundState = async (
   userLocations: LocationsDataObjTypeArr,
   userPreferences: userPreferencesType,
+  isTodayFullyLogged: boolean,
 ) => {
-  const state = buildBackgroundState(userLocations, userPreferences);
+  const state = buildBackgroundState(
+    userLocations,
+    userPreferences,
+    isTodayFullyLogged,
+  );
 
   try {
     if (Capacitor.getPlatform() === "ios") {
