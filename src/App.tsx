@@ -76,6 +76,8 @@ import { Route } from "react-router-dom";
 import MajorUpdateOverlay from "./components/MajorUpdateOverlay";
 import SalahTimesPage from "./pages/SalahTimesPage";
 import { toggleDBConnection as toggleDBConnection } from "./utils/dbUtils";
+import { refreshCurrentLocation } from "./utils/currentLocation";
+import { syncBackgroundState } from "./utils/backgroundSync";
 import { LocalNotifications } from "@capacitor/local-notifications";
 import {
   adhanLibrarySalahs,
@@ -203,6 +205,8 @@ const App = () => {
                   new Date().toISOString(),
                   setUserPreferences,
                 );
+
+                await refreshCurrentLocation(dbConnection, setUserLocations);
               } catch (error) {
                 console.error(
                   "Unable to generate salah times / schedule notifications",
@@ -339,6 +343,8 @@ const App = () => {
           new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
           setUserPreferences,
         );
+
+        await refreshCurrentLocation(dbConnection, setUserLocations);
       }
     };
 
@@ -488,6 +494,19 @@ const App = () => {
     // userPreferences.country,
     userLocations,
   ]);
+
+  // Depends on every preference, because the background job also needs the
+  // per-salah notification settings that the effect above does not watch.
+  useEffect(() => {
+    if (
+      !isDatabaseInitialised ||
+      userPreferences.prayerCalculationMethod === ""
+    ) {
+      return;
+    }
+
+    syncBackgroundState(userLocations, userPreferences);
+  }, [isDatabaseInitialised, userLocations, userPreferences]);
 
   useEffect(() => {
     let copyOfMissedSalahList: SalahByDateObjType = {};

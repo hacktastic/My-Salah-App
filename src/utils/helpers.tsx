@@ -11,6 +11,15 @@ import {
 } from "../types/types";
 import { toggleDBConnection } from "./dbUtils";
 import {
+  buildAfterIshaReminderPlan,
+  buildCalculationParams,
+  buildSalahNotificationPlan,
+  PlannedNotification,
+  upperCaseFirstLetter,
+} from "./salahSchedule";
+
+export { upperCaseFirstLetter };
+import {
   CalculationMethod,
   CalculationParameters,
   Coordinates,
@@ -18,7 +27,7 @@ import {
   PrayerTimes,
 } from "adhan";
 import { LocalNotifications } from "@capacitor/local-notifications";
-import { addDays, addMinutes, format, isValid, parse } from "date-fns";
+import { format, isValid, parse } from "date-fns";
 import { Toast } from "@capacitor/toast";
 import { Dialog } from "@capacitor/dialog";
 import { Capacitor } from "@capacitor/core";
@@ -196,24 +205,6 @@ export const cancelNotifications = async (
   // );
 };
 
-const salahIdMap = {
-  fajr: 1,
-  sunrise: 2,
-  dhuhr: 3,
-  asr: 4,
-  maghrib: 5,
-  isha: 6,
-};
-
-const generateNotificationId = (
-  salahName: SalahNamesTypeAdhanLibrary,
-  date: Date,
-) => {
-  const dateFormatted = format(date, "ddMMyyyy");
-
-  return Number(dateFormatted + salahIdMap[salahName]);
-};
-
 export const toLocalDateFromUTCClock = (utcDate: Date) => {
   return new Date(
     utcDate.getUTCFullYear(),
@@ -223,10 +214,6 @@ export const toLocalDateFromUTCClock = (utcDate: Date) => {
     utcDate.getUTCMinutes(),
     utcDate.getUTCSeconds(),
   );
-};
-
-export const upperCaseFirstLetter = (text: string) => {
-  return text.charAt(0).toUpperCase() + text.slice(1);
 };
 
 export const checkNotificationPermissions = async () => {
@@ -284,144 +271,51 @@ export const scheduleSalahNotifications = async (
 ) => {
   await cancelNotifications(salahName);
 
-  // console.log("Scheduling notifications for: ", salahName);
+  const activeLocation = getActiveLocation(userLocations);
+  if (!activeLocation) return;
 
-  const now = new Date();
+  const plan = buildSalahNotificationPlan(
+    activeLocation.latitude,
+    activeLocation.longitude,
+    userPreferences,
+    salahName,
+    setting,
+    new Date(),
+    Capacitor.getPlatform(),
+  );
 
-  const nextSevenDays = Array.from({ length: 8 }, (_, i) => {
-    return addDays(now, i);
-  });
+  await schedulePlannedNotifications(plan);
+};
 
-  const sound =
-    setting === "adhan"
-      ? Capacitor.getPlatform() === "android" && salahName === "fajr"
-        ? "adhan_fajr.mp3"
-        : Capacitor.getPlatform() === "android" && salahName !== "fajr"
-          ? "adhan.mp3"
-          : "adhan.wav"
-      : "default";
-
-  if (setting === "on" || setting === "adhan") {
-    const result = await generateActiveLocationParams(
-      userLocations,
-      userPreferences,
-    );
-
-    if (!result) return;
-    const { params, coordinates } = result;
-
-    const arr = [];
-
-    for (let i = 0; i < nextSevenDays.length; i++) {
-      const salahTime = new PrayerTimes(coordinates, nextSevenDays[i], params)[
-        salahName
-      ];
-
-      if (now < salahTime) {
-        arr.push(salahTime);
-      }
-    }
-
-    for (let i = 0; i < arr.length; i++) {
-      const uniqueId = generateNotificationId(salahName, arr[i]);
-
-      const notificationMsg =
-        salahName === "sunrise"
-          ? "The sun is rising!"
-          : `It's time to pray ${upperCaseFirstLetter(salahName)}`;
-
-      const channelId =
-        setting === "adhan" && salahName === "fajr"
-          ? "fajr-reminder-with-adhan"
-          : setting === "adhan" && salahName !== "fajr"
-            ? "dhuhr-asr-maghrib-isha-reminders-with-adhan"
-            : "salah-reminders-without-adhan";
-
-      await LocalNotifications.schedule({
-        notifications: [
-          {
-            id: uniqueId,
-            title: `${upperCaseFirstLetter(salahName)}`,
-            body: notificationMsg,
-            schedule: {
-              at: arr[i],
-              allowWhileIdle: true,
-              repeats: false,
-            },
-            sound: sound,
-            channelId: channelId,
-          },
-        ],
-      });
-    }
+const schedulePlannedNotifications = async (plan: PlannedNotification[]) => {
+  for (const { at, ...notification } of plan) {
+    await LocalNotifications.schedule({
+      notifications: [
+        {
+          id: notification.id,
+          title: notification.title,
+          body: notification.body,
+          schedule: { at, allowWhileIdle: true, repeats: false },
+          sound: notification.sound,
+          channelId: notification.channelId,
+        },
+      ],
+    });
   }
-
-  // console.log(
-  //   "PENDING NOTIFICATIONS AFTER scheduleSalahNotifications HAS RUN: ",
-  //   (await LocalNotifications.getPending()).notifications,
-  // );
 };
 
 export const generateActiveLocationParams = async (
   userLocations: LocationsDataObjTypeArr,
   userPreferences: userPreferencesType,
 ) => {
-  // console.log(
-  //   "generateActiveLocationParams function beginning, calculation method is: ",
-  //   userPreferences.prayerCalculationMethod,
-  // );
-
   const activeLocation = getActiveLocation(userLocations);
+  if (!activeLocation) return;
 
-  if (userLocations.length === 0 || !activeLocation) {
-    // console.error(
-    //   "No active location exists, generateActiveLocationParams function discontinouing",
-    // );
-    return;
-  }
-
-  if (!activeLocation) {
-    // throw new Error("No active location found");
-    // console.error("Active location does not exist");
-    return;
-  }
-
-  const coordinates = new Coordinates(
+  return buildCalculationParams(
     activeLocation.latitude,
     activeLocation.longitude,
+    userPreferences,
   );
-
-  if (!userPreferences.prayerCalculationMethod) {
-    // console.error(
-    //   "Calculation method does not exist, discontinuing generateActiveLocationParams function",
-    // );
-    return;
-  }
-
-  const params = CalculationMethod[userPreferences.prayerCalculationMethod]();
-
-  // console.log("params before amendments:", params);
-
-  params.madhab = userPreferences.madhab;
-  params.highLatitudeRule = userPreferences.highLatitudeRule;
-  params.fajrAngle = Number(userPreferences.fajrAngle);
-  params.ishaAngle = Number(userPreferences.ishaAngle);
-  params.adjustments.fajr = Number(userPreferences.fajrAdjustment);
-  params.adjustments.dhuhr = Number(userPreferences.dhuhrAdjustment);
-  params.adjustments.asr = Number(userPreferences.asrAdjustment);
-  params.adjustments.maghrib = Number(userPreferences.maghribAdjustment);
-  params.adjustments.isha = Number(userPreferences.ishaAdjustment);
-  params.shafaq = userPreferences.shafaqRule;
-  params.polarCircleResolution = userPreferences.polarCircleResolution;
-
-  // console.log("params after amendments:", params);
-
-  // console.log(
-  //   "generateActiveLocationParams has run, calculation method is: ",
-  //   userPreferences.prayerCalculationMethod,
-  // );
-
-  return { params, coordinates };
 };
 
 export const setAdhanLibraryDefaults = async (
@@ -502,56 +396,18 @@ export const scheduleAfterIshaDailyNotifications = async (
 ) => {
   await cancelNotifications("Daily Reminder");
 
-  const now = new Date();
+  const activeLocation = getActiveLocation(userLocations);
+  if (!activeLocation) return;
 
-  const nextSevenDays = Array.from({ length: 8 }, (_, i) => {
-    return addDays(now, i);
-  });
-
-  const result = await generateActiveLocationParams(
-    userLocations,
+  const plan = buildAfterIshaReminderPlan(
+    activeLocation.latitude,
+    activeLocation.longitude,
     userPreferences,
+    delay,
+    new Date(),
   );
 
-  if (!result) return;
-  const { params, coordinates } = result;
-
-  const arr = [];
-
-  for (let i = 0; i < nextSevenDays.length; i++) {
-    const salahTime = new PrayerTimes(coordinates, nextSevenDays[i], params)[
-      "isha"
-    ];
-
-    if (now < salahTime) {
-      arr.push(addMinutes(salahTime, delay));
-    }
-  }
-  // console.log("arr: ", arr);
-
-  for (let i = 0; i < arr.length; i++) {
-    await LocalNotifications.schedule({
-      notifications: [
-        {
-          id: 1000 + i,
-          title: "Daily Reminder",
-          body: `Did you log your prayers today?`,
-          schedule: {
-            at: arr[i],
-            allowWhileIdle: true,
-            repeats: false,
-          },
-          sound: "default",
-          channelId: "daily-reminder",
-        },
-      ],
-    });
-  }
-
-  // console.log(
-  //   "PENDING NOTIFICATIONS AFTER THE AFTER ISHA FUNCTION HAS RUN: ",
-  //   (await LocalNotifications.getPending()).notifications,
-  // );
+  await schedulePlannedNotifications(plan);
 };
 
 export const extractSalahTime = (

@@ -24,6 +24,16 @@ const config: CapacitorConfig = {
     cleartext: true,
   },
   plugins: {
+    // Only iOS sends state to the runner. On Android the job finds no state and
+    // exits; CurrentLocationWorker.java does the Android work.
+    BackgroundRunner: {
+      label: "com.mysalahapp.app.locationrefresh",
+      src: "runners/background.js",
+      event: "refreshLocation",
+      repeat: true,
+      interval: 15,
+      autoStart: true,
+    },
     LocalNotifications: {
       smallIcon: "res:///ic_stat_name",
       iconColor: "#26a1d5",

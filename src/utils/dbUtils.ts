@@ -62,6 +62,27 @@ export async function toggleDBConnection(
   }
 }
 
+const locationColumnsAddedLater = [
+  { name: "isCurrentLocation", definition: "INTEGER NOT NULL DEFAULT 0" },
+  { name: "updatedAt", definition: "TEXT NOT NULL DEFAULT ''" },
+];
+
+// Older installs and older backups have a userLocationsTable without these columns.
+export const addMissingLocationColumns = async (db: SQLiteDBConnection) => {
+  const tableInfo = await db.query(`PRAGMA table_info(userLocationsTable)`);
+  const existingColumns = new Set(
+    (tableInfo.values ?? []).map((column) => column.name),
+  );
+
+  for (const { name, definition } of locationColumnsAddedLater) {
+    if (!existingColumns.has(name)) {
+      await db.execute(
+        `ALTER TABLE userLocationsTable ADD COLUMN ${name} ${definition}`,
+      );
+    }
+  }
+};
+
 export const fetchAllLocations = async (
   dbConnection: React.MutableRefObject<SQLiteDBConnection | undefined>,
 ): Promise<{

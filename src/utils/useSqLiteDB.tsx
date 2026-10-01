@@ -5,7 +5,7 @@ import {
   SQLiteDBConnection,
   CapacitorSQLite,
 } from "@capacitor-community/sqlite";
-import { toggleDBConnection } from "./dbUtils";
+import { addMissingLocationColumns, toggleDBConnection } from "./dbUtils";
 
 const useSQLiteDB = () => {
   const sqliteConnection = useRef<SQLiteConnection>(); // This is the connection to the dbConnection
@@ -123,13 +123,17 @@ const useSQLiteDB = () => {
           locationName TEXT NOT NULL,
           latitude REAL NOT NULL,
           longitude REAL NOT NULL,
-          isSelected INTEGER DEFAULT 0
+          isSelected INTEGER DEFAULT 0,
+          isCurrentLocation INTEGER NOT NULL DEFAULT 0,
+          updatedAt TEXT NOT NULL DEFAULT ''
         ) STRICT`,
       ];
 
       for (const sql of createTablesSql) {
         await dbConnection.current.execute(sql);
       }
+
+      await addMissingLocationColumns(dbConnection.current);
     } catch (error) {
       console.error(error);
     } finally {
