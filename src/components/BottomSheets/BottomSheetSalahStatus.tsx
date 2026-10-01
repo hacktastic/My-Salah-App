@@ -18,6 +18,7 @@ import {
 
 import {
   salahStatusColorsHexCodes,
+  getSalahHaloProps,
   reasonsStyles,
   salahNamesArr,
   validSalahStatuses,
@@ -305,6 +306,8 @@ const BottomSheetSalahStatus = ({
   //   "h-full px-5 py-3 rounded-xl mx-auto text-center flex flex-col items-center justify-around w-full";
   const statusBoxStyles =
     "aspect-square rounded-xl flex flex-col items-center justify-center";
+  const jamaahHalo = getSalahHaloProps("group");
+  const prayedHalo = getSalahHaloProps("female-alone");
 
   useEffect(() => {
     if (
@@ -372,8 +375,9 @@ const BottomSheetSalahStatus = ({
                   }}
                   style={{
                     backgroundColor: salahStatusColorsHexCodes.group,
+                    ...jamaahHalo.style,
                   }}
-                  className={statusBoxStyles}
+                  className={`${statusBoxStyles} ${jamaahHalo.className}`}
                 >
                   {" "}
                   <GoPeople className="w-full mb-1 text-3xl" />
@@ -392,8 +396,9 @@ const BottomSheetSalahStatus = ({
                   }}
                   style={{
                     backgroundColor: salahStatusColorsHexCodes["female-alone"],
+                    ...prayedHalo.style,
                   }}
-                  className={statusBoxStyles}
+                  className={`${statusBoxStyles} ${prayedHalo.className}`}
                 >
                   {" "}
                   <GoPerson className="w-full mb-1 text-3xl" />
@@ -454,6 +459,8 @@ const BottomSheetSalahStatus = ({
               }}
               style={{
                 backgroundColor: salahStatusColorsHexCodes.late,
+                // White text is under 3:1 on the yellow.
+                color: "#000",
               }}
               className={statusBoxStyles}
             >

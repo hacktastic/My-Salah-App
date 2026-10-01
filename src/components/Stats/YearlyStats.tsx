@@ -15,7 +15,10 @@ import {
   SalahRecordsArrayType,
   SalahStatusType,
 } from "../../types/types";
-import { salahStatusColorsHexCodes } from "../../utils/constants";
+import {
+  salahStatusColorsHexCodes,
+  showsSalahHalo,
+} from "../../utils/constants";
 import BestMonthCard from "./BestMonthCard";
 
 interface YearlyStatsPropsType {
@@ -274,17 +277,28 @@ const YearlyStats = ({
                 {periodData.period}
               </span>
 
-              <span className="flex h-2 my-3 overflow-hidden rounded-full bg-[var(--app-border-color)]">
-                {relevantStatuses.map((status) => (
-                  <span
-                    key={status}
-                    aria-hidden="true"
-                    style={{
-                      width: `${periodData.statusPercentages[status]}%`,
-                      backgroundColor: salahStatusColorsHexCodes[status],
-                    }}
-                  />
-                ))}
+              {/* The gap separates Jamaah from Alone, which share a colour. The track shows only for an empty period. */}
+              <span
+                className={`flex h-2 my-3 overflow-hidden rounded-full gap-[2px] ${
+                  relevantStatuses.some(
+                    (status) => periodData.statusPercentages[status] > 0
+                  )
+                    ? ""
+                    : "bg-[var(--app-border-color)]"
+                }`}
+              >
+                {relevantStatuses
+                  .filter((status) => periodData.statusPercentages[status] > 0)
+                  .map((status) => (
+                    <span
+                      key={status}
+                      aria-hidden="true"
+                      style={{
+                        flex: `${periodData.statusPercentages[status]} 1 0`,
+                        backgroundColor: salahStatusColorsHexCodes[status],
+                      }}
+                    />
+                  ))}
               </span>
 
               <span className="grid grid-cols-2 gap-x-2 gap-y-1 text-[10px]">
@@ -298,6 +312,9 @@ const YearlyStats = ({
                       className="w-2.5 h-2.5 rounded-[0.15rem] shrink-0"
                       style={{
                         backgroundColor: salahStatusColorsHexCodes[status],
+                        ...(showsSalahHalo(status) && {
+                          boxShadow: "0 0 0 1.5px var(--salah-halo-color)",
+                        }),
                       }}
                     />
                     <span className="sr-only">

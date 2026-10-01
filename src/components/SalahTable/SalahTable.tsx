@@ -21,6 +21,7 @@ import { TbEdit } from "react-icons/tb";
 import { SalahRecordsArrayType } from "../../types/types";
 import {
   salahStatusColorsHexCodes,
+  getSalahHaloProps,
   salahNamesArr,
 } from "../../utils/constants";
 // import { TbEdit } from "react-icons/tb";
@@ -360,6 +361,7 @@ const SalahTable = ({
                     ]?.includes(salahName)
                       ? true
                       : false;
+                    const halo = getSalahHaloProps(rowData.salahs[salahName]);
                     return (
                       <section
                         onClick={() => {
@@ -420,8 +422,9 @@ const SalahTable = ({
                                       salahName
                                     ] as keyof typeof salahStatusColorsHexCodes
                                   ],
+                                ...halo.style,
                               }}
-                              className={`${salahTableIndividualSquareStyles}`}
+                              className={`${salahTableIndividualSquareStyles} ${halo.className}`}
                             ></motion.div>
                           </AnimatePresence>
                         )}

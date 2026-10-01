@@ -1,7 +1,9 @@
 import { format } from "date-fns";
+import type { CSSProperties } from "react";
 import {
   SalahNamesType,
   SalahNamesTypeAdhanLibrary,
+  SalahStatusType,
   userPreferencesType,
 } from "../types/types";
 
@@ -94,12 +96,45 @@ export const reasonsStyles =
 
 export const salahStatusColorsHexCodes = {
   group: "#5FAE82",
-  "male-alone": "#D4B245",
+  "male-alone": "#5FAE82",
   "female-alone": "#5FAE82",
   excused: "#8C4FB5",
-  late: "#D9653B",
-  missed: "#E63946",
+  late: "#E5B233",
+  missed: "#E5484D",
   "": "#585858",
+};
+
+// Jamaah and On Time share a green, so the gold halo (--salah-halo-color) is what tells them apart.
+export const showsSalahHalo = (status: SalahStatusType) =>
+  status === "group" || status === "female-alone";
+
+export const getSalahHaloProps = (
+  status: SalahStatusType
+): { className: string; style: CSSProperties } => {
+  if (!showsSalahHalo(status)) return { className: "", style: {} };
+  return {
+    className: "salah-halo",
+    // The fill moves to ::after so the ring in ::before can sit between it and the page.
+    style: {
+      backgroundColor: "transparent",
+      "--halo-fill": salahStatusColorsHexCodes[status],
+    } as CSSProperties,
+  };
+};
+
+// Each CSS animation starts when its element mounts, and the table mounts rows as it scrolls.
+// Pinning every halo to the timeline origin keeps them all at the same angle.
+export const syncSalahHaloAnimations = (event: AnimationEvent) => {
+  if (!event.animationName.startsWith("salah-halo")) return;
+  for (const animation of document.getAnimations()) {
+    if (
+      "animationName" in animation &&
+      String(animation.animationName).startsWith("salah-halo") &&
+      animation.startTime !== 0
+    ) {
+      animation.startTime = 0;
+    }
+  }
 };
 
 // export const prayerStatusColorsHexCodes = {

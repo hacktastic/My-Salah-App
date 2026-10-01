@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { SalahNamesType } from "../../types/types";
 import {
   salahStatusColorsHexCodes,
+  getSalahHaloProps,
   reasonsStyles,
   INITIAL_MODAL_BREAKPOINT,
   MODAL_BREAKPOINTS,
@@ -126,6 +127,7 @@ const BottomSheetSingleDateView = ({
           </h1>
 
           {clickedDateData.map((item) => {
+            const halo = getSalahHaloProps(item.salahStatus);
             return (
               <div
                 key={item.date + item.salahName}
@@ -146,10 +148,10 @@ const BottomSheetSingleDateView = ({
                     style={{
                       backgroundColor:
                         salahStatusColorsHexCodes[item.salahStatus],
+                      ...(item.salahStatus === "late" && { color: "#000" }),
+                      ...halo.style,
                     }}
-                    className={
-                      "capitalize-first-letter w-4/12 rounded-3xl p-2 text-center"
-                    }
+                    className={`capitalize-first-letter w-4/12 rounded-3xl p-2 text-center ${halo.className}`}
                   >
                     {item.salahStatus === "group"
                       ? "In Jamaah"
