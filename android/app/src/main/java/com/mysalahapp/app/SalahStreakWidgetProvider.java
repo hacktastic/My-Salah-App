@@ -16,11 +16,11 @@ import android.widget.RemoteViews;
 import androidx.annotation.Nullable;
 import com.mysalahapp.app.WidgetLayoutSelector.Layout;
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.TimeZone;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -33,6 +33,7 @@ public class SalahStreakWidgetProvider extends AppWidgetProvider {
     private static final int BROKEN_COUNT_COLOR = 0xFF8E8E93;
     private static final long MIDNIGHT_WINDOW_MILLIS = 15 * 60 * 1000L;
 
+    private static final String[] DEFAULT_NAMES = { "Fajr", "Dhuhr", "Asar", "Maghrib", "Isha" };
     private static final int[] DOT_IDS = { R.id.dot_0, R.id.dot_1, R.id.dot_2, R.id.dot_3, R.id.dot_4 };
     private static final int[] HALO_IDS = { R.id.halo_0, R.id.halo_1, R.id.halo_2, R.id.halo_3, R.id.halo_4 };
     private static final int[] LABEL_IDS = { R.id.label_0, R.id.label_1, R.id.label_2, R.id.label_3, R.id.label_4 };
@@ -160,10 +161,15 @@ public class SalahStreakWidgetProvider extends AppWidgetProvider {
         views.setViewVisibility(R.id.widget_empty, View.GONE);
 
         JSONArray salah = entry.optJSONArray("salah");
+        int streak = entry.optInt("streak");
+        String[] names = new String[DOT_IDS.length];
+        String[] statuses = new String[DOT_IDS.length];
         boolean brokenToday = false;
 
         for (int i = 0; i < DOT_IDS.length; i++) {
             String status = statusAt(salah, i);
+            names[i] = nameAt(salah, i);
+            statuses[i] = status;
             if (status.equals("late") || status.equals("missed")) brokenToday = true;
 
             if (!hasDots) continue;
@@ -172,15 +178,21 @@ public class SalahStreakWidgetProvider extends AppWidgetProvider {
             views.setInt(DOT_IDS[i], "setColorFilter", statusColor(status));
             views.setViewVisibility(HALO_IDS[i], showsHalo(status) ? View.VISIBLE : View.GONE);
             if (hasLabels) {
-                views.setTextViewText(LABEL_IDS[i], statusLabel(status));
+                views.setTextViewText(LABEL_IDS[i], WidgetText.statusLabel(status));
             }
         }
 
-        views.setTextViewText(R.id.widget_streak_count, String.valueOf(entry.optInt("streak")));
+        views.setTextViewText(R.id.widget_streak_count, String.valueOf(streak));
+        views.setContentDescription(R.id.widget_root, WidgetText.describe(streak, names, statuses));
         if (brokenToday) {
             views.setTextColor(R.id.widget_streak_count, BROKEN_COUNT_COLOR);
         }
         return views;
+    }
+
+    private static String nameAt(@Nullable JSONArray salah, int index) {
+        JSONObject item = salah == null ? null : salah.optJSONObject(index);
+        return item == null ? DEFAULT_NAMES[index] : item.optString("name", DEFAULT_NAMES[index]);
     }
 
     private static String statusAt(@Nullable JSONArray salah, int index) {
@@ -204,26 +216,6 @@ public class SalahStreakWidgetProvider extends AppWidgetProvider {
                 return 0xFFE5484D;
             default:
                 return 0xFF585858;
-        }
-    }
-
-    // Copied from the labels in src/components/BottomSheets/BottomSheetSingleDateView.tsx.
-    private static String statusLabel(String status) {
-        switch (status) {
-            case "group":
-                return "In Jamaah";
-            case "male-alone":
-                return "On Time";
-            case "female-alone":
-                return "Prayed";
-            case "late":
-                return "Late";
-            case "missed":
-                return "Missed";
-            case "excused":
-                return "Excused";
-            default:
-                return "—";
         }
     }
 
@@ -255,12 +247,7 @@ public class SalahStreakWidgetProvider extends AppWidgetProvider {
         AlarmManager alarmManager = context.getSystemService(AlarmManager.class);
         if (alarmManager == null) return;
 
-        Calendar next = Calendar.getInstance();
-        next.add(Calendar.DAY_OF_YEAR, 1);
-        next.set(Calendar.HOUR_OF_DAY, 0);
-        next.set(Calendar.MINUTE, 0);
-        next.set(Calendar.SECOND, 5);
-        next.set(Calendar.MILLISECOND, 0);
-        alarmManager.setWindow(AlarmManager.RTC, next.getTimeInMillis(), MIDNIGHT_WINDOW_MILLIS, midnightIntent(context));
+        long midnight = WidgetSchedule.nextMidnight(System.currentTimeMillis(), TimeZone.getDefault());
+        alarmManager.setWindow(AlarmManager.RTC, midnight, MIDNIGHT_WINDOW_MILLIS, midnightIntent(context));
     }
 }
