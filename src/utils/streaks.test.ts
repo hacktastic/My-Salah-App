@@ -106,6 +106,15 @@ describe("computeStreaks", () => {
     });
   });
 
+  it("keeps the streak through yesterday when the app stays open past midnight", () => {
+    // The latest day is yesterday, because App.tsx loads days only on launch or resume.
+    const days = buildDays([GOOD, GOOD, GOOD], "2026-10-09");
+    expect(computeStreaks(days, new Date(2026, 9, 10, 0, 30))).toMatchObject({
+      activeStreakCount: 3,
+      streaks: [{ days: 3, isActive: true }],
+    });
+  });
+
   it("does not change its input", () => {
     const days = buildDays([GOOD, EXCUSED, GOOD]);
     const before = JSON.parse(JSON.stringify(days));

@@ -1,12 +1,11 @@
 import { addDays, format, parseISO } from "date-fns";
 import {
   SalahNamesType,
-  SalahRecordType,
   SalahRecordsArrayType,
   SalahStatusType,
 } from "../types/types";
 import { salahNamesArr } from "./constants";
-import { computeStreaks } from "./streaks";
+import { computeStreaks, padDaysToDate } from "./streaks";
 
 export type WidgetSalah = { name: SalahNamesType; status: SalahStatusType };
 export type WidgetEntry = { date: string; streak: number; salah: WidgetSalah[] };
@@ -17,11 +16,6 @@ export type WidgetSnapshot = {
 };
 
 const ENTRY_COUNT = 3;
-
-const emptyDay = (date: Date): SalahRecordType => ({
-  date: format(date, "yyyy-MM-dd"),
-  salahs: { Fajr: "", Dhuhr: "", Asar: "", Maghrib: "", Isha: "" },
-});
 
 // Entry dates come from days[0], not from now. If the app stays open past
 // midnight, days[0] is yesterday, and the native widget still selects the
@@ -34,11 +28,10 @@ export const buildWidgetSnapshot = (
 
   const latestDay = parseISO(days[0].date);
   const entries: WidgetEntry[] = [];
-  let paddedDays = days;
 
   for (let offset = 0; offset < ENTRY_COUNT; offset++) {
     const entryDate = addDays(latestDay, offset);
-    if (offset > 0) paddedDays = [emptyDay(entryDate), ...paddedDays];
+    const paddedDays = padDaysToDate(days, entryDate);
 
     entries.push({
       date: format(entryDate, "yyyy-MM-dd"),

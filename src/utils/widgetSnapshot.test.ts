@@ -63,6 +63,17 @@ describe("buildWidgetSnapshot", () => {
     }
   });
 
+  it("matches the in-app count when the app stays open past midnight", () => {
+    const afterMidnight = new Date(2026, 9, 10, 0, 30);
+    const days = buildDays([GOOD, GOOD, GOOD], "2026-10-09");
+    const entry = buildWidgetSnapshot(days, afterMidnight)!.entries.find(
+      (e) => e.date === "2026-10-10",
+    )!;
+    expect(computeStreaks(days, afterMidnight).activeStreakCount).toBe(
+      entry.streak,
+    );
+  });
+
   it("lists the five salah in order, with empty statuses after today", () => {
     const days = buildDays([["group", "late", "excused", "", "missed"]]);
     const [today, tomorrow, dayAfter] = buildWidgetSnapshot(days, NOW)!.entries;
