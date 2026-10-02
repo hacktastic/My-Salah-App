@@ -34,19 +34,9 @@ struct Provider: TimelineProvider {
     }
 
     // The later entries start at local midnight, so the widget rolls over without the app.
-    // The app reloads the timeline after each change, so the policy is .never.
     func getTimeline(in context: Context, completion: @escaping (Timeline<StreakEntry>) -> Void) {
-        let snapshot = SnapshotStore.load()
-        let now = Date()
-        var entries = [StreakEntry(date: now, day: SnapshotStore.entry(on: SnapshotStore.dayString(now), in: snapshot))]
-
-        for day in snapshot?.entries ?? [] {
-            if let start = SnapshotStore.startOfDay(day.date), start > now {
-                entries.append(StreakEntry(date: start, day: day))
-            }
-        }
-
-        entries.sort { $0.date < $1.date }
-        completion(Timeline(entries: entries, policy: .never))
+        let timeline = SnapshotStore.timeline(SnapshotStore.load(), now: Date())
+        let entries = timeline.items.map { StreakEntry(date: $0.date, day: $0.day) }
+        completion(Timeline(entries: entries, policy: .after(timeline.refresh)))
     }
 }

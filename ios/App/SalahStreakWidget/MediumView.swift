@@ -12,12 +12,12 @@ struct MediumView: View {
             VStack(alignment: .leading, spacing: 5) {
                 ForEach(Array(day.salah.prefix(5).enumerated()), id: \.offset) { _, salah in
                     HStack(spacing: 8) {
-                        Text(salah.displayName)
+                        Text(SalahText.displayName(salah.name))
                             .font(.caption)
                             .foregroundColor(WidgetColors.text(colorScheme))
                             .frame(width: 56, alignment: .leading)
                         SalahDot(status: salah.status, size: 10, showsHalo: true)
-                        Text(SalahStatusStyle.label(salah.status))
+                        Text(SalahText.label(salah.status))
                             .font(.caption)
                             .foregroundColor(WidgetColors.secondaryText)
                             .lineLimit(1)

@@ -22,11 +22,16 @@ struct SalahStreakWidgetView: View {
     var body: some View {
         Group {
             if let day = entry.day {
-                if family == .systemMedium {
-                    MediumView(day: day)
-                } else {
-                    SmallView(day: day)
+                Group {
+                    if family == .systemMedium {
+                        MediumView(day: day)
+                    } else {
+                        SmallView(day: day)
+                    }
                 }
+                // One description for the whole widget, so VoiceOver does not read "F D A M I".
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(SalahText.accessibilityDescription(day))
             } else {
                 EmptyStateView()
             }

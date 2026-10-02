@@ -28,11 +28,6 @@ enum WidgetColors {
     }
 }
 
-extension WidgetSnapshot.Salah {
-    // The stored key is "Asar"; the app shows "Asr" (SalahTable.tsx).
-    var displayName: String { name == "Asar" ? "Asr" : name }
-}
-
 enum SalahStatusStyle {
     // Copied from salahStatusColorsHexCodes in src/utils/constants.tsx.
     static func color(_ status: String) -> Color {
@@ -42,19 +37,6 @@ enum SalahStatusStyle {
         case "late": return Color(hex: 0xE5B233)
         case "missed": return Color(hex: 0xE5484D)
         default: return Color(hex: 0x585858)
-        }
-    }
-
-    // Copied from the labels in src/components/BottomSheets/BottomSheetSingleDateView.tsx.
-    static func label(_ status: String) -> String {
-        switch status {
-        case "group": return "In Jamaah"
-        case "male-alone": return "On Time"
-        case "female-alone": return "Prayed"
-        case "late": return "Late"
-        case "missed": return "Missed"
-        case "excused": return "Excused"
-        default: return "—"
         }
     }
 

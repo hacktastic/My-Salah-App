@@ -55,6 +55,30 @@ enum SnapshotStore {
         return String(format: "%04d-%02d-%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
     }
 
+    struct TimelineItem {
+        let date: Date
+        let day: WidgetSnapshot.Entry?
+    }
+
+    // Timeline dates are absolute. An hourly rebuild applies a clock or time-zone change
+    // within an hour, also when the app does not run. This is 24 reloads a day.
+    static let refreshInterval: TimeInterval = 60 * 60
+
+    static func timeline(
+        _ snapshot: WidgetSnapshot?,
+        now: Date,
+        calendar: Calendar = gregorian
+    ) -> (items: [TimelineItem], refresh: Date) {
+        var items = [TimelineItem(date: now, day: entry(on: dayString(now, calendar: calendar), in: snapshot))]
+        for day in snapshot?.entries ?? [] {
+            if let start = startOfDay(day.date, calendar: calendar), start > now {
+                items.append(TimelineItem(date: start, day: day))
+            }
+        }
+        items.sort { $0.date < $1.date }
+        return (items, now.addingTimeInterval(refreshInterval))
+    }
+
     static func startOfDay(_ day: String, calendar: Calendar = gregorian) -> Date? {
         let parts = day.split(separator: "-").compactMap { Int($0) }
         guard parts.count == 3 else { return nil }

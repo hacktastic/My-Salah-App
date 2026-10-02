@@ -158,15 +158,18 @@ The effect also runs on app resume.
 - Files in the target:
   - `SnapshotStore.swift`: decodes `WidgetSnapshot` with `Codable`, and applies the selection rule
     and the empty-state rule from section 2.2.
-  - `Provider.swift`: a `TimelineProvider`. It returns one timeline entry for each snapshot entry, with
-    each timeline date at local midnight of the entry `date`. The reload policy is `.never`, because
-    the app reloads the timelines when the data changes.
+  - `Provider.swift`: a `TimelineProvider`. It uses `SnapshotStore.timeline`, which returns one entry
+    for each snapshot entry, at local midnight of the entry `date`. The reload policy is
+    `.after(now + 1 hour)`. Timeline dates are absolute, so the hourly rebuild applies a clock or
+    time-zone change within an hour, also when the app does not run.
+  - `SalahText.swift`: the labels, the "Asr" display name, and the accessibility description. It uses
+    Foundation only, so `npm run test:ios-widget` can check it on macOS.
   - `SmallView.swift` and `MediumView.swift`: the layouts from section 5.
   - `SalahStreakWidget.swift`: the `@main` widget configuration, with `.systemSmall` and
     `.systemMedium` as the supported families.
 - On iOS 17 and later, the views use `containerBackground`. On iOS 15 and 16, the views use a plain
   background.
-- `widgetURL` opens the app at the home page.
+- A tap opens the app. The widget has no `widgetURL`, because the app has no URL scheme.
 
 ## 4. Android
 
@@ -288,16 +291,23 @@ Android widgets have no timeline, so the provider schedules its own refresh.
   - Dark background: `rgb(27,27,28)`.
   - Light background: `rgb(247,247,247)`.
 
-## 6. Error handling
+## 6. Accessibility and versions
+
+- Each widget has one accessibility description for screen readers, for example "3 day streak. Fajr:
+  In Jamaah. Dhuhr: On Time. Asr: Not logged. ...". The child views are hidden from screen readers.
+- `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` are set at the project level, so the app and the
+  widget extension always have the same version.
+
+## 7. Error handling
 
 - `syncWidget` catches all plugin errors and logs them. A widget failure never blocks a salah log.
 - On web, `syncWidget` does nothing.
 - The native readers show the empty state for a missing snapshot, JSON that is not valid, an unknown
   `version`, or no matching entry (section 2.2).
 
-## 7. Testing
+## 8. Testing
 
-### 7.1 Automated tests (Vitest)
+### 8.1 Automated tests (Vitest)
 
 - `src/utils/streaks.test.ts`: characterization tests for the extracted rules.
   - All days good.
@@ -315,7 +325,7 @@ Android widgets have no timeline, so the provider schedules its own refresh.
 - These tests are pure logic with no render. On `main` (2026-10-01), all 28 existing Vitest tests fail
   with a render TypeError. Report the new tests separately from that baseline.
 
-### 7.2 Android
+### 8.2 Android
 
 - Build with JDK 21 in `android/`:
   `JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home ANDROID_HOME=/opt/homebrew/share/android-commandlinetools ./gradlew :app:assembleDebug`
@@ -325,12 +335,15 @@ Android widgets have no timeline, so the provider schedules its own refresh.
   - Log salah and check that the widget updates.
   - Move the device clock past midnight and check the rollover.
 
-### 7.3 iOS
+### 8.3 iOS
 
 - CocoaPods is not installed on the development machine for this work, so iOS cannot be built there.
 - The developer adds the target in Xcode, runs `pod install`, and tests on a simulator.
 - Use SwiftUI previews with fixed snapshots for the layout work.
+- Run `npm run test:ios-widget`. It compiles the Foundation-only widget files with
+  `ios/App/SalahStreakWidgetChecks/main.swift` on macOS, and runs the checks under the Gregorian,
+  Islamic, Buddhist, and Japanese calendars.
 
-### 7.4 Both platforms
+### 8.4 Both platforms
 
 - Compare the widget count with the wreath count on the home page.
