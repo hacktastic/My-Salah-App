@@ -147,9 +147,9 @@ public class SalahStreakWidgetProvider extends AppWidgetProvider {
             views.setImageViewResource(DOT_IDS[i], status.isEmpty() ? R.drawable.widget_dot_empty : R.drawable.widget_dot_filled);
             views.setInt(DOT_IDS[i], "setColorFilter", statusColor(status));
 
+            views.setViewVisibility(HALO_IDS[i], showsHalo(status) ? View.VISIBLE : View.GONE);
             if (medium) {
                 views.setTextViewText(LABEL_IDS[i], statusLabel(status));
-                views.setViewVisibility(HALO_IDS[i], showsHalo(status) ? View.VISIBLE : View.GONE);
             }
         }
 

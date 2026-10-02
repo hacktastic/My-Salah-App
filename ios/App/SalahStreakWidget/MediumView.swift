@@ -12,7 +12,7 @@ struct MediumView: View {
             VStack(alignment: .leading, spacing: 5) {
                 ForEach(Array(day.salah.prefix(5).enumerated()), id: \.offset) { _, salah in
                     HStack(spacing: 8) {
-                        Text(salah.name)
+                        Text(salah.displayName)
                             .font(.caption)
                             .foregroundColor(WidgetColors.text(colorScheme))
                             .frame(width: 56, alignment: .leading)

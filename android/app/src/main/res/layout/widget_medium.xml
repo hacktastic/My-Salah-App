@@ -161,7 +161,7 @@
                 <TextView
                     android:layout_width="60dp"
                     android:layout_height="wrap_content"
-                    android:text="Asar"
+                    android:text="Asr"
                     android:textColor="@color/widget_text"
                     android:textSize="12sp" />
                 <FrameLayout

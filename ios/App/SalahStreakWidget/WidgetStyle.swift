@@ -28,6 +28,11 @@ enum WidgetColors {
     }
 }
 
+extension WidgetSnapshot.Salah {
+    // The stored key is "Asar"; the app shows "Asr" (SalahTable.tsx).
+    var displayName: String { name == "Asar" ? "Asr" : name }
+}
+
 enum SalahStatusStyle {
     // Copied from salahStatusColorsHexCodes in src/utils/constants.tsx.
     static func color(_ status: String) -> Color {

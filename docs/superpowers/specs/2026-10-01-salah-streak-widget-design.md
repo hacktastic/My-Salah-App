@@ -91,8 +91,9 @@ Rules for the entries:
   five empty statuses. This entry is correct if the user logs nothing more before midnight.
 - **Today+2:** `streak` is always 0, because a day with no logs (today+1) breaks the streak. `salah`
   has five empty statuses.
-- `salah` always has five slots in the order Fajr, Dhuhr, Asar, Maghrib, Isha. The name is `Asar`,
-  as in `src/utils/constants.tsx:144-150`. The name is not `Asr`.
+- `salah` always has five slots in the order Fajr, Dhuhr, Asar, Maghrib, Isha. The stored name is
+  `Asar`, as in `src/utils/constants.tsx:144-150`. The widgets show the label "Asr", as the app does in
+  `SalahTable.tsx:354`.
 
 Native selection rule: the widget shows the entry with the latest `date` that is today or earlier, in
 local time. After today+2, the widget keeps the today+2 entry.
@@ -225,10 +226,13 @@ Android widgets have no timeline, so the provider schedules its own refresh.
 │   🌿  12  🌿   │   the wreath around a large, bold count
 │   day streak  │
 │               │
-│  ● ● ● ○ ○    │   five dots in the status colors; an empty slot is an outline
+│  ◉ ● ● ○ ○    │   five dots in the status colors; an empty slot is an outline
 │  F D A M I    │   initials in small secondary text
 └───────────────┘
 ```
+
+- `group` and `female-alone` get the gold halo ring, as in section 5.2 (◉ above). Without the ring,
+  "In Jamaah" and "On Time" have the same green and look the same.
 
 ### 5.2 Medium (4x2)
 
@@ -236,13 +240,14 @@ Android widgets have no timeline, so the provider schedules its own refresh.
 ┌──────────────────────────────────────┐
 │   🌿  12  🌿   │ Fajr     ● In Jamaah ✦│
 │   day streak  │ Dhuhr    ● On Time    │
-│               │ Asar     ● Late       │
+│               │ Asr      ● Late       │
 │               │ Maghrib  ○ —          │
 │               │ Isha     ○ —          │
 └──────────────────────────────────────┘
 ```
 
-- The right column has one row for each salah: the name, a dot, and the status label.
+- The right column has one row for each salah: the name, a dot, and the status label. The name of
+  the third salah is "Asr".
 - The labels are the same as in `BottomSheetSingleDateView.tsx:156-162`: `group` is "In Jamaah",
   `male-alone` is "On Time", `female-alone` is "Prayed", `late` is "Late", `missed` is "Missed", and
   `excused` is "Excused". An empty slot shows "—" and not "No Data", because the row has little space.

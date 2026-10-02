@@ -18,14 +18,14 @@
 - Do not add a `Co-Authored-By` trailer to commits.
 - Write commit messages and code comments in Simplified Technical English. Comment only the non-obvious reason.
 - Day strings use the format `"yyyy-MM-dd"` in local time. String order is date order.
-- The salah names are `Fajr`, `Dhuhr`, `Asar`, `Maghrib`, `Isha`, in that order. The name is `Asar`, not `Asr`.
+- The salah names are `Fajr`, `Dhuhr`, `Asar`, `Maghrib`, `Isha`, in that order. The stored name is `Asar`; the widgets show the label "Asr".
 - The snapshot `version` is `1`.
 - The plugin JS name is `WidgetBridge`. Its only method is `update({ json: string })`.
 - iOS App Group: `group.com.mysalahapp.app`. iOS key: `widgetSnapshot`.
 - Android `SharedPreferences` name: `salah_widget`. Android key: `snapshot`.
 - The iOS widget bundle ID is `com.mysalahapp.app.SalahStreakWidget`. Its deployment target is iOS 15.0. It uses Swift language version 5.
 - Status colors: `group`, `male-alone`, `female-alone` `#5FAE82`; `excused` `#8C4FB5`; `late` `#E5B233`; `missed` `#E5484D`; empty `#585858`.
-- The gold halo is `#F2C94C`, for `group` and `female-alone` only, on the medium size only.
+- The gold halo is `#F2C94C`, for `group` and `female-alone` only, on the small and the medium size.
 - Theme colors: background `#F7F7F7` light and `#1B1B1C` dark; text `#000000` light and `#FFFFFF` dark; wreath `#000000` light and `#E9E9E9` dark; secondary text `#8E8E93` in both modes.
 - The empty-state text is `Open My Salah App to start your streak`.
 - Baselines on this branch before Task 1: `npx tsc --noEmit` passes. `npm run lint` reports `40 problems (31 errors, 9 warnings)`. The memory notes say that 28 render tests fail on `main`. The pure tests in `src/utils/` pass.
