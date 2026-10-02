@@ -31,6 +31,7 @@ public class SalahStreakWidgetProvider extends AppWidgetProvider {
     private static final int SUPPORTED_VERSION = 1;
     private static final float MEDIUM_MIN_WIDTH_DP = 250f;
     private static final int BROKEN_COUNT_COLOR = 0xFF8E8E93;
+    private static final long MIDNIGHT_WINDOW_MILLIS = 15 * 60 * 1000L;
 
     private static final int[] DOT_IDS = { R.id.dot_0, R.id.dot_1, R.id.dot_2, R.id.dot_3, R.id.dot_4 };
     private static final int[] HALO_IDS = { R.id.halo_0, R.id.halo_1, R.id.halo_2, R.id.halo_3, R.id.halo_4 };
@@ -225,8 +226,8 @@ public class SalahStreakWidgetProvider extends AppWidgetProvider {
         return PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
     }
 
-    // set() with RTC is inexact, so the app needs no exact-alarm permission. A few
-    // minutes of delay after midnight is acceptable for a streak count.
+    // set() can deliver hours late on API 24-30 (the window is 75% of the time to
+    // the trigger). setWindow() limits the delay and needs no exact-alarm permission.
     private static void scheduleMidnightRefresh(Context context) {
         AlarmManager alarmManager = context.getSystemService(AlarmManager.class);
         if (alarmManager == null) return;
@@ -237,6 +238,6 @@ public class SalahStreakWidgetProvider extends AppWidgetProvider {
         next.set(Calendar.MINUTE, 0);
         next.set(Calendar.SECOND, 5);
         next.set(Calendar.MILLISECOND, 0);
-        alarmManager.set(AlarmManager.RTC, next.getTimeInMillis(), midnightIntent(context));
+        alarmManager.setWindow(AlarmManager.RTC, next.getTimeInMillis(), MIDNIGHT_WINDOW_MILLIS, midnightIntent(context));
     }
 }
