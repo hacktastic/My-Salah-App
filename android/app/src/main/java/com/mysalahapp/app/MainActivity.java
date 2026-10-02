@@ -8,6 +8,7 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(CurrentLocationSyncPlugin.class);
+        registerPlugin(WidgetBridgePlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

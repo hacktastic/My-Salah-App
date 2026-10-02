@@ -64,7 +64,6 @@ import {
   parse,
   differenceInDays,
   subDays,
-  parseISO,
   isAfter,
   startOfDay,
   isValid,
@@ -78,6 +77,9 @@ import { Route } from "react-router-dom";
 import MajorUpdateOverlay from "./components/MajorUpdateOverlay";
 import SalahTimesPage from "./pages/SalahTimesPage";
 import { toggleDBConnection as toggleDBConnection } from "./utils/dbUtils";
+import { computeStreaks } from "./utils/streaks";
+import { buildWidgetSnapshot } from "./utils/widgetSnapshot";
+import { syncWidget } from "./utils/widgetSync";
 import { refreshCurrentLocation } from "./utils/currentLocation";
 import { syncBackgroundState } from "./utils/backgroundSync";
 import { LocalNotifications } from "@capacitor/local-notifications";
@@ -562,6 +564,13 @@ const App = () => {
     isTodayFullyLogged,
   ]);
 
+  // Every write path sets a new fetchedSalahData array, so this effect covers
+  // single logs, batch updates, imports, start-date changes, and a new day.
+  useEffect(() => {
+    if (!isDatabaseInitialised) return;
+    syncWidget(buildWidgetSnapshot(fetchedSalahData, new Date()));
+  }, [isDatabaseInitialised, fetchedSalahData]);
+
   useEffect(() => {
     let copyOfMissedSalahList: SalahByDateObjType = {};
     fetchedSalahData.forEach((obj) => {
@@ -901,141 +910,12 @@ const App = () => {
   // const [activeLocation, setActiveLocation] = useState();
 
   const generateStreaks = (fetchedSalahData: SalahRecordsArrayType) => {
-    const reversedFetchedSalahDataArr = fetchedSalahData.reverse();
-    const streakDatesObjectsArray: streakDatesObjType[] = [];
-    const streakDatesArr: Date[] = [];
-    let excusedDays = 0;
-    const todaysDate = new Date();
-    let isActiveStreak = false;
-
-    const isConsecutiveDay = (date2: Date, date1: Date) =>
-      differenceInDays(date1, date2) === 1;
-
-    const streakBreakingStatuses = ["missed", "late", ""];
-
-    const isStreakBreakingStatus = (statusesArr: SalahStatusType[]) =>
-      statusesArr.some((status) => streakBreakingStatuses.includes(status));
-
-    for (
-      let i = reversedFetchedSalahDataArr.length > 1 ? 1 : 0;
-      i < reversedFetchedSalahDataArr.length;
-      i++
-    ) {
-      const salahStatuses = Object.values(
-        reversedFetchedSalahDataArr[i].salahs,
-      );
-
-      if (reversedFetchedSalahDataArr.length === 1) {
-        const salahStatuses = Object.values(
-          reversedFetchedSalahDataArr[0].salahs,
-        );
-
-        if (!isStreakBreakingStatus(salahStatuses)) {
-          if (salahStatuses.includes("excused")) {
-            excusedDays += 1;
-          }
-          streakDatesArr.push(todaysDate);
-
-          isActiveStreak = true;
-          handleEndOfStreak(
-            streakDatesArr,
-            isActiveStreak,
-            excusedDays,
-            streakDatesObjectsArray,
-          );
-          excusedDays = 0;
-        }
-        return;
-      }
-
-      const previousDate = parseISO(reversedFetchedSalahDataArr[i - 1].date);
-      const currentDate = parseISO(reversedFetchedSalahDataArr[i].date);
-      const firstDateSalahStatuses = Object.values(
-        reversedFetchedSalahDataArr[0].salahs,
-      );
-
-      if (
-        isConsecutiveDay(previousDate, todaysDate) &&
-        !salahStatuses.includes("late") &&
-        !salahStatuses.includes("missed")
-      ) {
-        isActiveStreak = true;
-      }
-      if (
-        isConsecutiveDay(previousDate, currentDate) &&
-        !isStreakBreakingStatus(salahStatuses)
-      ) {
-        if (salahStatuses.includes("excused")) {
-          excusedDays += 1;
-        }
-
-        i === 1 && !isStreakBreakingStatus(firstDateSalahStatuses)
-          ? streakDatesArr.push(previousDate, currentDate)
-          : streakDatesArr.push(currentDate);
-
-        if (isConsecutiveDay(previousDate, todaysDate)) {
-          handleEndOfStreak(
-            streakDatesArr,
-            isActiveStreak,
-            excusedDays,
-            streakDatesObjectsArray,
-          );
-          excusedDays = 0;
-        }
-      } else {
-        handleEndOfStreak(
-          streakDatesArr,
-          isActiveStreak,
-          excusedDays,
-          streakDatesObjectsArray,
-        );
-        excusedDays = 0;
-      }
-    }
-  };
-
-  const handleEndOfStreak = (
-    streakDatesArr: Date[],
-    isActiveStreak: boolean,
-    excusedDays: number,
-    streakDatesObjectsArray: streakDatesObjType[],
-  ) => {
-    // console.log("excusedDays: ", excusedDays);
-    // console.log("streakDatesArr: ", streakDatesArr.length);
-
-    // if (excusedDays === streakDatesArr.length) return;
-    if (streakDatesArr.length > 0) {
-      const streakDaysAmount =
-        streakDatesArr.length === 1
-          ? 1
-          : differenceInDays(
-              streakDatesArr[streakDatesArr.length - 1],
-              subDays(streakDatesArr[0], 1),
-            );
-      if (isActiveStreak) {
-        setActiveStreakCount(streakDaysAmount - excusedDays);
-      } else if (!isActiveStreak) {
-        setActiveStreakCount(0);
-      }
-
-      let streakDatesObj: streakDatesObjType = {
-        startDate: streakDatesArr[0],
-        endDate: streakDatesArr[streakDatesArr.length - 1],
-        days: streakDaysAmount - excusedDays,
-        isActive: isActiveStreak,
-        excusedDays: excusedDays,
-      };
-
-      streakDatesObjectsArray.push(streakDatesObj);
-
-      setStreakDatesObjectsArr(
-        streakDatesObjectsArray
-          .sort((a, b) => a.startDate.getTime() - b.startDate.getTime())
-          .reverse(),
-      );
-      excusedDays = 0;
-      streakDatesArr.length = 0;
-    }
+    const { activeStreakCount, streaks } = computeStreaks(
+      fetchedSalahData,
+      new Date(),
+    );
+    setActiveStreakCount(activeStreakCount);
+    setStreakDatesObjectsArr(streaks);
   };
 
   return (

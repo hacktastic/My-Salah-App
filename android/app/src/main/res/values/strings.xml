@@ -4,4 +4,9 @@
     <string name="title_activity_main">My Salah App</string>
     <string name="package_name">com.mysalahapp.app</string>
     <string name="custom_url_scheme">com.mysalahapp.app</string>
+    <string name="widget_name">Salah Streak</string>
+    <string name="widget_description">Your current streak and today\'s salah.</string>
+    <string name="widget_empty">Open My Salah App to start your streak</string>
+    <string name="widget_empty_short">Open My Salah App</string>
+    <string name="widget_day_streak">day streak</string>
 </resources>
