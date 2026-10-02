@@ -128,7 +128,8 @@ extension View {
         if #available(iOS 17.0, *) {
             containerBackground(color, for: .widget)
         } else {
-            background(color)
+            // Before iOS 17 the background covers only the content, not the whole widget.
+            frame(maxWidth: .infinity, maxHeight: .infinity).background(color)
         }
     }
 }
