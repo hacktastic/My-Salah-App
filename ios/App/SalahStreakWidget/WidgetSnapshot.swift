@@ -42,12 +42,20 @@ enum SnapshotStore {
         snapshot?.entries.filter { $0.date <= day }.max { $0.date < $1.date }
     }
 
-    static func dayString(_ date: Date, calendar: Calendar = .current) -> String {
+    // The snapshot dates come from date-fns, which is always Gregorian. Calendar.current
+    // follows the device setting, for example islamic-umalqura in Saudi Arabia.
+    static var gregorian: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .autoupdatingCurrent
+        return calendar
+    }
+
+    static func dayString(_ date: Date, calendar: Calendar = gregorian) -> String {
         let parts = calendar.dateComponents([.year, .month, .day], from: date)
         return String(format: "%04d-%02d-%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
     }
 
-    static func startOfDay(_ day: String, calendar: Calendar = .current) -> Date? {
+    static func startOfDay(_ day: String, calendar: Calendar = gregorian) -> Date? {
         let parts = day.split(separator: "-").compactMap { Int($0) }
         guard parts.count == 3 else { return nil }
         return calendar.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2]))
