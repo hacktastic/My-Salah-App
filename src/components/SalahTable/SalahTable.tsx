@@ -22,6 +22,7 @@ import { SalahRecordsArrayType } from "../../types/types";
 import {
   salahStatusColorsHexCodes,
   getSalahHaloProps,
+  getSalahSquarePopProps,
   salahNamesArr,
 } from "../../utils/constants";
 // import { TbEdit } from "react-icons/tb";
@@ -394,23 +395,12 @@ const SalahTable = ({
                           <AnimatePresence>
                             <motion.div
                               // key={`${i}-${rowData.date}`}
-                              {...(showBoxAnimation &&
-                              clonedSelectedSalahAndDate.current[
-                                rowData.date
-                              ]?.includes(salahName)
-                                ? {
-                                    initial: { scale: 0 },
-                                    // animate: { scale: [1.3, 1] },
-                                    animate: { scale: 1.3 },
-                                    transition: {
-                                      type: "spring",
-                                      stiffness: 300,
-                                      damping: 10,
-                                      mass: 1,
-                                      delay: 0.3,
-                                    },
-                                  }
-                                : {})}
+                              {...getSalahSquarePopProps(
+                                showBoxAnimation &&
+                                  !!clonedSelectedSalahAndDate.current[
+                                    rowData.date
+                                  ]?.includes(salahName),
+                              )}
                               onAnimationComplete={() => {
                                 setShowBoxAnimation(false);
                                 clonedSelectedSalahAndDate.current = {};

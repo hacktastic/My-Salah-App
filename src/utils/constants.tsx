@@ -122,6 +122,23 @@ export const getSalahHaloProps = (
   };
 };
 
+export const getSalahSquarePopProps = (isPopping: boolean) =>
+  isPopping
+    ? {
+        initial: { scale: 0 },
+        animate: { scale: 1.3 },
+        transition: {
+          type: "spring",
+          stiffness: 300,
+          damping: 10,
+          mass: 1,
+          delay: 0.3,
+        },
+      }
+    : // Without an explicit target, a square that mounted mid-pop has no base scale and stays enlarged.
+      // initial false stops each row that scrolls in from firing onAnimationComplete.
+      { initial: false as const, animate: { scale: 1 } };
+
 // Each CSS animation starts when its element mounts, and the table mounts rows as it scrolls.
 // Pinning every halo to the timeline origin keeps them all at the same angle.
 export const syncSalahHaloAnimations = (event: AnimationEvent) => {
