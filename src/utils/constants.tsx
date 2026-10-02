@@ -102,6 +102,23 @@ export const salahStatusColorsHexCodes = {
   "": "#585858",
 };
 
+export const getSalahSquarePopProps = (isPopping: boolean) =>
+  isPopping
+    ? {
+        initial: { scale: 0 },
+        animate: { scale: 1.3 },
+        transition: {
+          type: "spring",
+          stiffness: 300,
+          damping: 10,
+          mass: 1,
+          delay: 0.3,
+        },
+      }
+    : // Without an explicit target, a square that mounted mid-pop has no base scale and stays enlarged.
+      // initial false stops each row that scrolls in from firing onAnimationComplete.
+      { initial: false as const, animate: { scale: 1 } };
+
 // export const prayerStatusColorsHexCodes = {
 //   group: "#0ec188",
 //   "male-alone": "rgb(216, 204, 24)",
