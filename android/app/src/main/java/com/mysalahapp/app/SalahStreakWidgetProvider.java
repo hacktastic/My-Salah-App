@@ -14,6 +14,7 @@ import android.util.SizeF;
 import android.view.View;
 import android.widget.RemoteViews;
 import androidx.annotation.Nullable;
+import com.mysalahapp.app.WidgetLayoutSelector.Layout;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
@@ -29,7 +30,6 @@ public class SalahStreakWidgetProvider extends AppWidgetProvider {
     private static final String TAG = "SalahStreakWidget";
     private static final String ACTION_MIDNIGHT = "com.mysalahapp.app.action.WIDGET_MIDNIGHT";
     private static final int SUPPORTED_VERSION = 1;
-    private static final float MEDIUM_MIN_WIDTH_DP = 250f;
     private static final int BROKEN_COUNT_COLOR = 0xFF8E8E93;
     private static final long MIDNIGHT_WINDOW_MILLIS = 15 * 60 * 1000L;
 
@@ -88,14 +88,20 @@ public class SalahStreakWidgetProvider extends AppWidgetProvider {
         RemoteViews views;
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            // The launcher uses the largest size that fits the widget.
             Map<SizeF, RemoteViews> layouts = new HashMap<>();
-            layouts.put(new SizeF(110f, 110f), buildViews(context, R.layout.widget_small, entry, false));
-            layouts.put(new SizeF(MEDIUM_MIN_WIDTH_DP, 110f), buildViews(context, R.layout.widget_medium, entry, true));
+            layouts.put(new SizeF(WidgetLayoutSelector.SMALL_SIZE_DP, WidgetLayoutSelector.ROW_HEIGHT_DP), buildViews(context, Layout.ROW_NARROW, entry));
+            layouts.put(new SizeF(WidgetLayoutSelector.ROW_WIDE_MIN_WIDTH_DP, WidgetLayoutSelector.ROW_HEIGHT_DP), buildViews(context, Layout.ROW_WIDE, entry));
+            layouts.put(new SizeF(WidgetLayoutSelector.SMALL_SIZE_DP, WidgetLayoutSelector.SMALL_SIZE_DP), buildViews(context, Layout.SMALL, entry));
+            layouts.put(new SizeF(WidgetLayoutSelector.MEDIUM_MIN_WIDTH_DP, WidgetLayoutSelector.SMALL_SIZE_DP), buildViews(context, Layout.MEDIUM, entry));
             views = new RemoteViews(layouts);
         } else {
-            int minWidth = manager.getAppWidgetOptions(id).getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH);
-            boolean medium = minWidth >= MEDIUM_MIN_WIDTH_DP;
-            views = buildViews(context, medium ? R.layout.widget_medium : R.layout.widget_small, entry, medium);
+            Bundle options = manager.getAppWidgetOptions(id);
+            Layout layout = WidgetLayoutSelector.select(
+                options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH),
+                options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT)
+            );
+            views = buildViews(context, layout, entry);
         }
 
         manager.updateAppWidget(id, views);
@@ -124,8 +130,24 @@ public class SalahStreakWidgetProvider extends AppWidgetProvider {
         }
     }
 
-    private static RemoteViews buildViews(Context context, int layout, @Nullable JSONObject entry, boolean medium) {
-        RemoteViews views = new RemoteViews(context.getPackageName(), layout);
+    private static int layoutResource(Layout layout) {
+        switch (layout) {
+            case ROW_NARROW:
+                return R.layout.widget_row_narrow;
+            case ROW_WIDE:
+                return R.layout.widget_row_wide;
+            case MEDIUM:
+                return R.layout.widget_medium;
+            default:
+                return R.layout.widget_small;
+        }
+    }
+
+    private static RemoteViews buildViews(Context context, Layout layout, @Nullable JSONObject entry) {
+        RemoteViews views = new RemoteViews(context.getPackageName(), layoutResource(layout));
+        // A RemoteViews action on a view that the layout does not have breaks the whole widget.
+        boolean hasDots = layout != Layout.ROW_NARROW;
+        boolean hasLabels = layout == Layout.MEDIUM;
         views.setOnClickPendingIntent(R.id.widget_root, openAppIntent(context));
 
         if (entry == null) {
@@ -144,11 +166,12 @@ public class SalahStreakWidgetProvider extends AppWidgetProvider {
             String status = statusAt(salah, i);
             if (status.equals("late") || status.equals("missed")) brokenToday = true;
 
+            if (!hasDots) continue;
+
             views.setImageViewResource(DOT_IDS[i], status.isEmpty() ? R.drawable.widget_dot_empty : R.drawable.widget_dot_filled);
             views.setInt(DOT_IDS[i], "setColorFilter", statusColor(status));
-
             views.setViewVisibility(HALO_IDS[i], showsHalo(status) ? View.VISIBLE : View.GONE);
-            if (medium) {
+            if (hasLabels) {
                 views.setTextViewText(LABEL_IDS[i], statusLabel(status));
             }
         }

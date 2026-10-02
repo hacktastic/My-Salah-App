@@ -15,7 +15,7 @@ for today. A tap on the widget opens the app.
 - The widget updates after each salah log.
 - The widget shows the correct values after local midnight, also when the app stays closed.
 - iOS has a small (2x2) widget and a medium (4x2) widget.
-- Android has one widget that resizes from 2x2 to 4x2.
+- Android has one widget that resizes from 2x1 to 4x2. The default size is 2x2.
 
 ### Out of scope
 
@@ -186,9 +186,12 @@ The effect also runs on app resume.
 - `onUpdate` and `onAppWidgetOptionsChanged` read the snapshot with `org.json`. They apply the
   selection rule and the empty-state rule from section 2.2. Then they build the `RemoteViews`.
 - Layout selection:
-  - On API 31 and later, use `new RemoteViews(Map<SizeF, RemoteViews>)` with the small layout at 2x2
-    and the medium layout at 4x2. The launcher selects the layout.
-  - On API 24 to 30, select the layout from `OPTION_APPWIDGET_MIN_WIDTH`.
+  - On API 31 and later, use `new RemoteViews(Map<SizeF, RemoteViews>)` with four sizes: the narrow
+    row at 2x1, the wide row at 3x1, the small layout at 2x2, and the medium layout at 4x2. The
+    launcher selects the largest size that fits.
+  - On API 24 to 30, `WidgetLayoutSelector.select` selects the layout from
+    `OPTION_APPWIDGET_MIN_WIDTH` and `OPTION_APPWIDGET_MIN_HEIGHT`. A height of 0 means that the
+    launcher has not measured the widget yet, so the selector uses the default 2x2 layout.
 - Each status dot is an `ImageView` with an oval drawable. Set its color with
   `setInt(id, "setColorFilter", color)`.
 - A tap sends a `PendingIntent` with `FLAG_IMMUTABLE` that opens `MainActivity`.
@@ -207,7 +210,8 @@ Android widgets have no timeline, so the provider schedules its own refresh.
 
 - `res/xml/salah_streak_widget_info.xml`:
   - `targetCellWidth` 2 and `targetCellHeight` 2.
-  - `minResizeWidth` and `minResizeHeight` for 2x2. `maxResizeWidth` and `maxResizeHeight` for 4x2.
+  - `minResizeWidth` for 2 columns and `minResizeHeight` for 1 row (`40dp`). `maxResizeWidth` and
+    `maxResizeHeight` for 4x2.
   - `resizeMode="horizontal|vertical"`.
   - `updatePeriodMillis="0"`.
   - A `previewLayout`.
@@ -231,10 +235,24 @@ Android widgets have no timeline, so the provider schedules its own refresh.
 └───────────────┘
 ```
 
-- `group` and `female-alone` get the gold halo ring, as in section 5.2 (◉ above). Without the ring,
+- `group` and `female-alone` get the gold halo ring, as in section 5.3 (◉ above). Without the ring,
   "In Jamaah" and "On Time" have the same green and look the same.
 
-### 5.2 Medium (4x2)
+### 5.2 One row (2x1, 3x1, 4x1), Android only
+
+```
+2x1:                    3x1 and 4x1:
+┌─────────────┐         ┌──────────────────────────┐
+│  🌿 12 🌿   │         │  🌿 12 🌿   ◉ ● ● ○ ○    │
+└─────────────┘         └──────────────────────────┘
+```
+
+- 2x1 has room only for the wreath and the count. From 3 columns, the five dots show after the count,
+  with the same colors and halo rule as the other sizes.
+- The empty state on one row is "Open My Salah App", because the full text does not fit.
+- iOS has no home-screen widget with one row.
+
+### 5.3 Medium (4x2)
 
 ```
 ┌──────────────────────────────────────┐
@@ -255,7 +273,7 @@ Android widgets have no timeline, so the provider schedules its own refresh.
   `showsSalahHalo` (`src/utils/constants.tsx:108-109`). The ring does not move, because widgets cannot
   animate.
 
-### 5.3 Colors and theme
+### 5.4 Colors and theme
 
 - Dot colors come from `salahStatusColorsHexCodes` (`src/utils/constants.tsx:97-105`):
   - `group`, `male-alone`, `female-alone`: `#5FAE82`.
